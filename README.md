@@ -1,1 +1,3 @@
-# hair_salon_app
+# hair_salon
+
+A new Flutter project.
