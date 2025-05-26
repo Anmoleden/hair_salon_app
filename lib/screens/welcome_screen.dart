@@ -128,7 +128,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: isSmallScreen ? 20 : 40,
-            vertical: 60,
+            vertical: 99,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
