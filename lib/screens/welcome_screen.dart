@@ -119,7 +119,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     return Scaffold(
       body: Container(
         width: double.infinity,
-        height: screenHeight, // ✅ Optional: make the container full height
+        height: screenHeight, // make the container full height
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.indigo, Colors.cyan],
@@ -131,7 +131,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           padding: EdgeInsets.symmetric(
             horizontal: isSmallScreen ? 20 : 40,
             vertical:
-                screenHeight * 0.1, // ✅ Adjust vertical padding using height
+                screenHeight * 0.1, // Adjust vertical padding using height
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
