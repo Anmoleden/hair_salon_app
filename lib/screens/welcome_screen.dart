@@ -113,11 +113,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height; // ✅ ADD this
     final isSmallScreen = screenWidth < 600;
 
     return Scaffold(
       body: Container(
         width: double.infinity,
+        height: screenHeight, // ✅ Optional: make the container full height
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.indigo, Colors.cyan],
@@ -128,7 +130,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: isSmallScreen ? 20 : 40,
-            vertical: 99,
+            vertical:
+                screenHeight * 0.1, // ✅ Adjust vertical padding using height
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
