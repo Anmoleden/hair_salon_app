@@ -15,9 +15,7 @@ class MyApp extends StatelessWidget {
       title: 'Hair Salon App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        textTheme: ThemeData.light().textTheme.apply(
-              fontFamily: 'Poppins',
-            ),
+        textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Poppins'),
       ),
       home: const WelcomeScreen(),
     );
