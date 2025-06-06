@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:face_camera/face_camera.dart';
 import 'screens/welcome_screen.dart';
+// ignore: unused_import
+import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize FaceCamera
+  await FaceCamera.initialize();
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
