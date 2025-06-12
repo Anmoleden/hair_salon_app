@@ -1,6 +1,8 @@
-import 'package:hair_salon/screens/detectfaceshape.dart';
+// import 'package:hair_salon/screens/detectfaceshape.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hair_salon/screens/gallery_view.dart';
+import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required String loginMethod});
@@ -52,10 +54,22 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedIndex,
         onTap: _onBottomNavTap,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.trending_up), label: "Trending"),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: "Favorites"),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Profile"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: "Home",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.trending_up),
+            label: "Trending",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite_border),
+            label: "Favorites",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: "Profile",
+          ),
         ],
       ),
       body: SafeArea(
@@ -100,14 +114,33 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const DetectFaceShapeScreen(),
+                          builder:
+                              (context) => GalleryView(
+                                title: 'Gallery',
+                                onImage: (InputImage inputImage) async {
+                                  // This will be filled in the next step
+                                },
+                                onDetectorViewModeChanged: () {},
+                              ),
                         ),
                       );
                     },
                   ),
-                  _FeatureIcon(icon: Icons.content_cut, text: "Try\nHairstyles", color: Colors.cyan),
-                  _FeatureIcon(icon: Icons.trending_up, text: "Trending", color: Colors.purple),
-                  _FeatureIcon(icon: Icons.history, text: "History", color: Colors.green),
+                  _FeatureIcon(
+                    icon: Icons.content_cut,
+                    text: "Try\nHairstyles",
+                    color: Colors.cyan,
+                  ),
+                  _FeatureIcon(
+                    icon: Icons.trending_up,
+                    text: "Trending",
+                    color: Colors.purple,
+                  ),
+                  _FeatureIcon(
+                    icon: Icons.history,
+                    text: "History",
+                    color: Colors.green,
+                  ),
                 ],
               ),
               SizedBox(height: screenHeight * 0.03),
@@ -138,7 +171,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(height: screenHeight * 0.015),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 255, 64, 191),
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          255,
+                          64,
+                          191,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -148,11 +186,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       icon: const Icon(Icons.camera_alt, color: Colors.white),
-                      label: const Text("Detect Face Shape", style: TextStyle(color: Colors.white)),
+                      label: const Text(
+                        "Detect Face Shape",
+                        style: TextStyle(color: Colors.white),
+                      ),
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const DetectFaceShapeScreen()),
+                          MaterialPageRoute(
+                            builder:
+                                (context) => GalleryView(
+                                  title: 'Gallery',
+                                  onImage: (inputImage) {
+                                    // You can handle the inputImage here or leave empty if not needed
+                                  },
+                                  onDetectorViewModeChanged: () {
+                                    // Handle mode change if needed
+                                  },
+                                ),
+                          ),
                         );
                       },
                     ),
@@ -170,7 +222,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontSize: screenWidth * 0.042,
                     ),
                   ),
-                  Text("See All", style: GoogleFonts.poppins(color: Colors.pinkAccent)),
+                  Text(
+                    "See All",
+                    style: GoogleFonts.poppins(color: Colors.pinkAccent),
+                  ),
                 ],
               ),
               SizedBox(height: screenHeight * 0.015),
@@ -221,11 +276,16 @@ class _FeatureIcon extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: screenWidth * 0.06,
+            // ignore: deprecated_member_use
             backgroundColor: color.withOpacity(0.1),
             child: Icon(icon, color: color, size: screenWidth * 0.06),
           ),
           SizedBox(height: screenWidth * 0.015),
-          Text(text, textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: screenWidth * 0.03)),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: screenWidth * 0.03),
+          ),
         ],
       ),
     );
@@ -256,34 +316,60 @@ class _TrendingCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
-            child: Image.network(imageUrl, height: double.infinity, width: double.infinity, fit: BoxFit.cover),
+            child: Image.network(
+              imageUrl,
+              height: double.infinity,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
           ),
           Positioned(
             top: 8,
             left: 8,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: Colors.pinkAccent, borderRadius: BorderRadius.circular(10)),
-              child: const Text("Trending", style: TextStyle(color: Colors.black, fontSize: 10)),
+              decoration: BoxDecoration(
+                color: Colors.pinkAccent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                "Trending",
+                style: TextStyle(color: Colors.black, fontSize: 10),
+              ),
             ),
           ),
           Positioned(
             bottom: 28,
             left: 8,
-            child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           Positioned(
             bottom: 10,
             left: 8,
-            child: Text("$gender · $length", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            child: Text(
+              "$gender · $length",
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
           ),
           Positioned(
             bottom: 10,
             right: 8,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-              child: const Text("Try On", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                "Try On",
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              ),
             ),
           ),
         ],

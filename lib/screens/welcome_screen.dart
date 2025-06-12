@@ -43,6 +43,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
     setState(() => _isLoading = false);
 
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen(loginMethod: 'Email')),
@@ -58,6 +59,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       setState(() => _isLoading = false);
 
       if (googleUser != null) {
+        if (!mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(
