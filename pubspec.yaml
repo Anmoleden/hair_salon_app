@@ -22,7 +22,11 @@ dependencies:
   camera: ^0.11.1
   image_cropper: ^9.1.0
   dotted_border: ^2.1.0
-
+  shimmer: ^2.0.0
+  percent_indicator: ^4.2.2 
+  intl: ^0.18.0
+  screenshot: ^3.0.0
+ 
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -32,3 +36,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/hairstyle.png
+    
+    - assets/hairs/short2.png
+    - assets/hairs/long1.png
+    - assets/hairs/med1.png
+    

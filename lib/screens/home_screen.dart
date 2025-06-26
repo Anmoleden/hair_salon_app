@@ -1,8 +1,10 @@
-// import 'package:hair_salon/screens/detectfaceshape.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hair_salon/screens/gallery_view.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'trending_page.dart';
+import 'try_hairstyles.dart';
+import 'history_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required String loginMethod});
@@ -41,213 +43,264 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Widget buildHomeBody(double screenWidth, double screenHeight) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.04,
+        vertical: screenHeight * 0.015,
+      ),
+      child: ListView(
+        children: [
+          Text(
+            "Home",
+            style: GoogleFonts.poppins(
+              fontSize: screenWidth * 0.055,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.01),
+          Text(
+            "Hello, Beautiful!",
+            style: GoogleFonts.poppins(
+              fontSize: screenWidth * 0.05,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            "Find your perfect hairstyle today",
+            style: GoogleFonts.poppins(
+              fontSize: screenWidth * 0.035,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.02),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _FeatureIcon(
+                icon: Icons.camera_alt,
+                text: "Detect\nFace Shape",
+                color: Colors.pinkAccent,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GalleryView(
+                        title: 'Gallery',
+                        onImage: (InputImage inputImage) async {},
+                        onDetectorViewModeChanged: () {},
+                      ),
+                    ),
+                  );
+                },
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TryHairstyles(),
+                    ),
+                  );
+                },
+                child: _FeatureIcon(
+                  icon: Icons.content_cut,
+                  text: "Try\nHairstyles",
+                  color: Colors.cyan,
+                ),
+              ),
+              _FeatureIcon(
+                icon: Icons.trending_up,
+                text: "Trending",
+                color: Colors.purple,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const TrendingPage(showFavoritesOnly: false),
+                    ),
+                  );
+                },
+              ),
+              _FeatureIcon(
+                icon: Icons.history,
+                text: "History",
+                color: Colors.green,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const HistoryPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          SizedBox(height: screenHeight * 0.03),
+          Container(
+            padding: EdgeInsets.all(screenWidth * 0.04),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Discover Your Perfect Hairstyle",
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: screenWidth * 0.042,
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.008),
+                Text(
+                  "Take a selfie to detect your face shape and get personalized hairstyle recommendations.",
+                  style: GoogleFonts.poppins(
+                    fontSize: screenWidth * 0.035,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.015),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 255, 64, 191),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.04,
+                      vertical: screenHeight * 0.015,
+                    ),
+                  ),
+                  icon: const Icon(Icons.camera_alt, color: Colors.white),
+                  label: const Text(
+                    "Detect Face Shape",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => GalleryView(
+                          title: 'Gallery',
+                          onImage: (inputImage) {},
+                          onDetectorViewModeChanged: () {},
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.03),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Trending Hairstyles",
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  fontSize: screenWidth * 0.042,
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const TrendingPage(showFavoritesOnly: false),
+                    ),
+                  );
+                },
+                child: Text(
+                  "See All",
+                  style: GoogleFonts.poppins(color: Colors.pinkAccent),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: screenHeight * 0.015),
+          SizedBox(
+            height: screenHeight * 0.25,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _trendingStyles.length,
+              itemBuilder: (context, index) {
+                final style = _trendingStyles[index];
+                return _TrendingCard(
+                  imageUrl: style['imageUrl']!,
+                  title: style['title']!,
+                  gender: style['gender']!,
+                  length: style['length']!,
+                  width: screenWidth * 0.4,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.pinkAccent,
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
-        onTap: _onBottomNavTap,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.trending_up),
-            label: "Trending",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_border),
-            label: "Favorites",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: "Profile",
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.04,
-            vertical: screenHeight * 0.015,
-          ),
-          child: ListView(
-            children: [
-              Text(
-                "Home",
-                style: GoogleFonts.poppins(
-                  fontSize: screenWidth * 0.055,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(height: screenHeight * 0.01),
-              Text(
-                "Hello, Beautiful!",
-                style: GoogleFonts.poppins(
-                  fontSize: screenWidth * 0.05,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                "Find your perfect hairstyle today",
-                style: GoogleFonts.poppins(
-                  fontSize: screenWidth * 0.035,
-                  color: Colors.grey[600],
-                ),
-              ),
-              SizedBox(height: screenHeight * 0.02),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _FeatureIcon(
-                    icon: Icons.camera_alt,
-                    text: "Detect\nFace Shape",
-                    color: Colors.pinkAccent,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => GalleryView(
-                                title: 'Gallery',
-                                onImage: (InputImage inputImage) async {
-                                  // This will be filled in the next step
-                                },
-                                onDetectorViewModeChanged: () {},
-                              ),
-                        ),
-                      );
-                    },
-                  ),
-                  _FeatureIcon(
-                    icon: Icons.content_cut,
-                    text: "Try\nHairstyles",
-                    color: Colors.cyan,
-                  ),
-                  _FeatureIcon(
-                    icon: Icons.trending_up,
-                    text: "Trending",
-                    color: Colors.purple,
-                  ),
-                  _FeatureIcon(
-                    icon: Icons.history,
-                    text: "History",
-                    color: Colors.green,
-                  ),
-                ],
-              ),
-              SizedBox(height: screenHeight * 0.03),
-              Container(
-                padding: EdgeInsets.all(screenWidth * 0.04),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Discover Your Perfect Hairstyle",
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        fontSize: screenWidth * 0.042,
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.008),
-                    Text(
-                      "Take a selfie to detect your face shape and get personalized hairstyle recommendations.",
-                      style: GoogleFonts.poppins(
-                        fontSize: screenWidth * 0.035,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.015),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          255,
-                          64,
-                          191,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.04,
-                          vertical: screenHeight * 0.015,
-                        ),
-                      ),
-                      icon: const Icon(Icons.camera_alt, color: Colors.white),
-                      label: const Text(
-                        "Detect Face Shape",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => GalleryView(
-                                  title: 'Gallery',
-                                  onImage: (inputImage) {
-                                    // You can handle the inputImage here or leave empty if not needed
-                                  },
-                                  onDetectorViewModeChanged: () {
-                                    // Handle mode change if needed
-                                  },
-                                ),
+    return WillPopScope(
+      onWillPop: () async {
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: Colors.pinkAccent,
+          unselectedItemColor: Colors.grey,
+          currentIndex: _selectedIndex,
+          onTap: _onBottomNavTap,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              label: "Home",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.trending_up),
+              label: "Trending",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border),
+              label: "Favorites",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              label: "Profile",
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: _selectedIndex == 0
+              ? buildHomeBody(screenWidth, screenHeight)
+              : _selectedIndex == 1
+                  ? const TrendingPage(showFavoritesOnly: false)
+                  : _selectedIndex == 2
+                      ? const TrendingPage(showFavoritesOnly: true)
+                      : Center(
+                          child: Text(
+                            "Profile Page (Coming Soon)",
+                            style: GoogleFonts.poppins(fontSize: 16),
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: screenHeight * 0.03),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Trending Hairstyles",
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: screenWidth * 0.042,
-                    ),
-                  ),
-                  Text(
-                    "See All",
-                    style: GoogleFonts.poppins(color: Colors.pinkAccent),
-                  ),
-                ],
-              ),
-              SizedBox(height: screenHeight * 0.015),
-              SizedBox(
-                height: screenHeight * 0.25,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _trendingStyles.length,
-                  itemBuilder: (context, index) {
-                    final style = _trendingStyles[index];
-                    return _TrendingCard(
-                      imageUrl: style['imageUrl']!,
-                      title: style['title']!,
-                      gender: style['gender']!,
-                      length: style['length']!,
-                      width: screenWidth * 0.4,
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+                        ),
         ),
       ),
     );
@@ -276,7 +329,6 @@ class _FeatureIcon extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: screenWidth * 0.06,
-            // ignore: deprecated_member_use
             backgroundColor: color.withOpacity(0.1),
             child: Icon(icon, color: color, size: screenWidth * 0.06),
           ),
