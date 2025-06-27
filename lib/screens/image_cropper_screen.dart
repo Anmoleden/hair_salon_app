@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
+import '../models/face_classifier.dart';
 
 class ImageCropperScreen extends StatefulWidget {
   final File imageFile;
@@ -13,6 +14,8 @@ class ImageCropperScreen extends StatefulWidget {
 
 class _ImageCropperScreenState extends State<ImageCropperScreen> {
   CroppedFile? _croppedFile;
+  Map<String, dynamic>? _classificationResult;
+  bool _isClassifying = false;
 
   @override
   void initState() {
@@ -34,11 +37,7 @@ class _ImageCropperScreenState extends State<ImageCropperScreen> {
         ),
       );
     } else if (Platform.isIOS) {
-      uiSettings.add(
-        IOSUiSettings(
-          title: 'Crop Image',
-        ),
-      );
+      uiSettings.add(IOSUiSettings(title: 'Crop Image'));
     }
 
     final croppedFile = await ImageCropper().cropImage(
@@ -53,11 +52,21 @@ class _ImageCropperScreenState extends State<ImageCropperScreen> {
     if (croppedFile != null) {
       setState(() {
         _croppedFile = croppedFile;
+        _isClassifying = true;
+      });
+      await ImageClassifier.loadModel();
+      final result = await ImageClassifier.classifyImage(
+        File(croppedFile.path),
+      );
+      if (!mounted) return;
+      setState(() {
+        _classificationResult = result;
+        _isClassifying = false;
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cropping cancelled')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cropping cancelled')));
     }
   }
 
@@ -66,11 +75,39 @@ class _ImageCropperScreenState extends State<ImageCropperScreen> {
     if (_croppedFile != null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Cropped Image')),
-        body: Center(child: Image.file(File(_croppedFile!.path))),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.file(File(_croppedFile!.path)),
+              const SizedBox(height: 24),
+              if (_isClassifying)
+                const CircularProgressIndicator()
+              else if (_classificationResult != null)
+                _buildResultWidget(_classificationResult!),
+            ],
+          ),
+        ),
       );
     }
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+  }
+
+  Widget _buildResultWidget(Map<String, dynamic> result) {
+    if (result.containsKey('error')) {
+      return Text(
+        'Error: ${result['error']}',
+        style: const TextStyle(color: Colors.red),
+      );
+    }
+    return Column(
+      children: [
+        Text(
+          'Face Shape: ${result['label']}',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        Text('Confidence: ${(result['confidence'] * 100).toStringAsFixed(2)}%'),
+      ],
     );
   }
 }

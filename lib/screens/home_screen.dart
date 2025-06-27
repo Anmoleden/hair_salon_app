@@ -85,11 +85,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => GalleryView(
-                        title: 'Gallery',
-                        onImage: (InputImage inputImage) async {},
-                        onDetectorViewModeChanged: () {},
-                      ),
+                      builder:
+                          (context) => GalleryView(
+                            title: 'Gallery',
+                            onImage: (InputImage inputImage) async {},
+                            onDetectorViewModeChanged: () {},
+                          ),
                     ),
                   );
                 },
@@ -117,8 +118,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          const TrendingPage(showFavoritesOnly: false),
+                      builder:
+                          (context) =>
+                              const TrendingPage(showFavoritesOnly: false),
                     ),
                   );
                 },
@@ -184,11 +186,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => GalleryView(
-                          title: 'Gallery',
-                          onImage: (inputImage) {},
-                          onDetectorViewModeChanged: () {},
-                        ),
+                        builder:
+                            (context) => GalleryView(
+                              title: 'Gallery',
+                              onImage: (inputImage) {},
+                              onDetectorViewModeChanged: () {},
+                            ),
                       ),
                     );
                   },
@@ -212,8 +215,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          const TrendingPage(showFavoritesOnly: false),
+                      builder:
+                          (context) =>
+                              const TrendingPage(showFavoritesOnly: false),
                     ),
                   );
                 },
@@ -252,16 +256,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return WillPopScope(
-      onWillPop: () async {
-        if (_selectedIndex != 0) {
-          setState(() {
-            _selectedIndex = 0;
-          });
-          return false;
-        }
-        return true;
-      },
+    return PopScope(
+      canPop: _selectedIndex == 0,
       child: Scaffold(
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
@@ -289,18 +285,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         body: SafeArea(
-          child: _selectedIndex == 0
-              ? buildHomeBody(screenWidth, screenHeight)
-              : _selectedIndex == 1
+          child:
+              _selectedIndex == 0
+                  ? buildHomeBody(screenWidth, screenHeight)
+                  : _selectedIndex == 1
                   ? const TrendingPage(showFavoritesOnly: false)
                   : _selectedIndex == 2
-                      ? const TrendingPage(showFavoritesOnly: true)
-                      : Center(
-                          child: Text(
-                            "Profile Page (Coming Soon)",
-                            style: GoogleFonts.poppins(fontSize: 16),
-                          ),
-                        ),
+                  ? const TrendingPage(showFavoritesOnly: true)
+                  : Center(
+                    child: Text(
+                      "Profile Page (Coming Soon)",
+                      style: GoogleFonts.poppins(fontSize: 16),
+                    ),
+                  ),
         ),
       ),
     );
@@ -329,7 +326,7 @@ class _FeatureIcon extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: screenWidth * 0.06,
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             child: Icon(icon, color: color, size: screenWidth * 0.06),
           ),
           SizedBox(height: screenWidth * 0.015),

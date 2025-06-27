@@ -19,16 +19,17 @@ class TrendingPage extends StatefulWidget {
 class _TrendingPageState extends State<TrendingPage> {
   List<Hairstyle> allHairstyles = [
     Hairstyle(
-        imageUrl: "https://i.imgur.com/3yNCE0N.jpg",
-        title: "Classic Bob",
-        gender: "Female",
-        length: "Medium",
-        isTrending: true,
-        isFavorite: false,
-        tags: ['Classic', 'Bob', 'Medium'],
-        description: 'A timeless classic bob haircut with a modern twist.',
-        faceShape: "Oval, Round, Heart",
-        popularity: 0.92),
+      imageUrl: "https://i.imgur.com/3yNCE0N.jpg",
+      title: "Classic Bob",
+      gender: "Female",
+      length: "Medium",
+      isTrending: true,
+      isFavorite: false,
+      tags: ['Classic', 'Bob', 'Medium'],
+      description: 'A timeless classic bob haircut with a modern twist.',
+      faceShape: "Oval, Round, Heart",
+      popularity: 0.92,
+    ),
     Hairstyle(
       imageUrl: "https://i.imgur.com/xvw3VZk.jpg",
       title: "Textured Crop",
@@ -112,11 +113,15 @@ class _TrendingPageState extends State<TrendingPage> {
 
   void _applyFilters() {
     setState(() {
-      filteredHairstyles = allHairstyles.where((style) {
-        bool matchesFilter = currentFilters.apply(style.gender, style.length);
-        bool matchesFavorite = !showFavoritesOnly || style.isFavorite;
-        return matchesFilter && matchesFavorite;
-      }).toList();
+      filteredHairstyles =
+          allHairstyles.where((style) {
+            bool matchesFilter = currentFilters.apply(
+              style.gender,
+              style.length,
+            );
+            bool matchesFavorite = !showFavoritesOnly || style.isFavorite;
+            return matchesFilter && matchesFavorite;
+          }).toList();
     });
   }
 
@@ -185,156 +190,179 @@ class _TrendingPageState extends State<TrendingPage> {
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: filteredHairstyles.isEmpty
-            ? Center(
-                child: Text(
-                  "No hairstyles found for selected filters.",
-                  style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey),
-                ),
-              )
-            : GridView.builder(
-                itemCount: filteredHairstyles.length,
-                physics: const BouncingScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.72,
-                ),
-                itemBuilder: (context, index) {
-                  final style = filteredHairstyles[index];
-                  return Material(
-                    borderRadius: BorderRadius.circular(16),
-                    elevation: 6,
-                    clipBehavior: Clip.hardEdge,
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => HairstyleDetailsScreen(hairstyle: style),
-                          ),
-                        );
-                      },
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: _NetworkImageWithShimmer(url: style.imageUrl),
-                          ),
-                          if (style.isTrending)
-                            Positioned(
-                              top: 8,
-                              left: 8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.pinkAccent,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Text(
-                                  "Trending",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+        child:
+            filteredHairstyles.isEmpty
+                ? Center(
+                  child: Text(
+                    "No hairstyles found for selected filters.",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
+                )
+                : GridView.builder(
+                  itemCount: filteredHairstyles.length,
+                  physics: const BouncingScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.72,
+                  ),
+                  itemBuilder: (context, index) {
+                    final style = filteredHairstyles[index];
+                    return Material(
+                      borderRadius: BorderRadius.circular(16),
+                      elevation: 6,
+                      clipBehavior: Clip.hardEdge,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) =>
+                                      HairstyleDetailsScreen(hairstyle: style),
+                            ),
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: _NetworkImageWithShimmer(
+                                url: style.imageUrl,
+                              ),
+                            ),
+                            if (style.isTrending)
+                              Positioned(
+                                top: 8,
+                                left: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
                                   ),
-                                ),
-                              ),
-                            ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: GestureDetector(
-                              onTap: () => toggleFavorite(style),
-                              child: CircleAvatar(
-                                radius: 16,
-                                backgroundColor: Colors.white.withOpacity(0.9),
-                                child: Icon(
-                                  style.isFavorite ? Icons.favorite : Icons.favorite_border,
-                                  color: Colors.pinkAccent,
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.4),
-                                    Colors.black.withOpacity(0.7),
-                                  ],
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    style.title,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
+                                  decoration: BoxDecoration(
+                                    color: Colors.pinkAccent,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Text(
+                                    "Trending",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
                                       color: Colors.white,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${style.gender} · ${style.length}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.white70,
-                                    ),
+                                ),
+                              ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () => toggleFavorite(style),
+                                child: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: Colors.white.withValues(
+                                    alpha: 0.9,
                                   ),
-                                  const SizedBox(height: 6),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => TryOnScreen(hairstyle: style),
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.white,
-                                        foregroundColor: Colors.pinkAccent,
-                                        elevation: 2,
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        "Try On",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                ],
+                                  child: Icon(
+                                    style.isFavorite
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: Colors.pinkAccent,
+                                    size: 18,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withValues(alpha: 0.4),
+                                      Colors.black.withValues(alpha: 0.7),
+                                    ],
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      style.title,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${style.gender} · ${style.length}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (_) => TryOnScreen(
+                                                    hairstyle: style,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.white,
+                                          foregroundColor: Colors.pinkAccent,
+                                          elevation: 2,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          "Try On",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
       ),
     );
   }
@@ -342,7 +370,7 @@ class _TrendingPageState extends State<TrendingPage> {
 
 class _NetworkImageWithShimmer extends StatelessWidget {
   final String url;
-  const _NetworkImageWithShimmer({required this.url, super.key});
+  const _NetworkImageWithShimmer({required this.url});
 
   @override
   Widget build(BuildContext context) {
@@ -358,12 +386,13 @@ class _NetworkImageWithShimmer extends StatelessWidget {
           ),
         );
       },
-      errorBuilder: (context, error, stackTrace) => Container(
-        color: Colors.grey.shade300,
-        child: const Center(
-          child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
-        ),
-      ),
+      errorBuilder:
+          (context, error, stackTrace) => Container(
+            color: Colors.grey.shade300,
+            child: const Center(
+              child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+            ),
+          ),
     );
   }
 }

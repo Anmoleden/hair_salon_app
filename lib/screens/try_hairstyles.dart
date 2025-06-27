@@ -11,7 +11,8 @@ class TryHairstyles extends StatefulWidget {
   State<TryHairstyles> createState() => _TryHairstylesState();
 }
 
-class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateMixin {
+class _TryHairstylesState extends State<TryHairstyles>
+    with TickerProviderStateMixin {
   List<CameraDescription>? _cameras;
   late final FaceDetector _faceDetector;
   List<Face> _faces = [];
@@ -57,7 +58,9 @@ class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateM
   ];
 
   List<String> get currentHairOptions =>
-      _isMale ? maleHairs[selectedCategory] ?? [] : femaleHairs[selectedCategory] ?? [];
+      _isMale
+          ? maleHairs[selectedCategory] ?? []
+          : femaleHairs[selectedCategory] ?? [];
 
   @override
   void initState() {
@@ -101,9 +104,10 @@ class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateM
       setState(() {
         _capturedImage = image;
         _faces = faces;
-        resultText = faces.isEmpty
-            ? "No face found. Try again."
-            : "Face detected! Drag, resize or rotate hair.";
+        resultText =
+            faces.isEmpty
+                ? "No face found. Try again."
+                : "Face detected! Drag, resize or rotate hair.";
 
         if (_autoAlignHair && faces.isNotEmpty) {
           final face = faces.first;
@@ -132,7 +136,7 @@ class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateM
   void _openPanel(String type) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.black.withOpacity(0.3),
+      backgroundColor: Colors.black.withValues(alpha: 0.3),
       isScrollControlled: true,
       builder: (context) {
         return StatefulBuilder(
@@ -141,24 +145,28 @@ class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateM
               initialChildSize: 0.4,
               minChildSize: 0.2,
               maxChildSize: 0.8,
-              builder: (_, controller) => Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                padding: const EdgeInsets.all(12),
-                child: type == "Hair"
-                    ? Column(
-                        children: [
-                          _buildCategoryTabs(setModalState),
-                          const SizedBox(height: 10),
-                          Expanded(child: _buildHairSelectorGrid()),
-                        ],
-                      )
-                    : type == "Glasses"
-                        ? _buildGlassesGrid(setModalState)
-                        : _buildSettings(),
-              ),
+              builder:
+                  (_, controller) => Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child:
+                        type == "Hair"
+                            ? Column(
+                              children: [
+                                _buildCategoryTabs(setModalState),
+                                const SizedBox(height: 10),
+                                Expanded(child: _buildHairSelectorGrid()),
+                              ],
+                            )
+                            : type == "Glasses"
+                            ? _buildGlassesGrid(setModalState)
+                            : _buildSettings(),
+                  ),
             );
           },
         );
@@ -171,36 +179,40 @@ class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateM
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: hairMap.keys.map((category) {
-        final selected = selectedCategory == category;
-        return GestureDetector(
-          onTap: () {
-            setModalState(() {
-              selectedCategory = category;
-              _selectedHair = '';
-            });
-            setState(() {});
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected ? Colors.teal[600] : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: selected ? Colors.teal : Colors.grey.shade300,
-                width: 2,
+      children:
+          hairMap.keys.map((category) {
+            final selected = selectedCategory == category;
+            return GestureDetector(
+              onTap: () {
+                setModalState(() {
+                  selectedCategory = category;
+                  _selectedHair = '';
+                });
+                setState(() {});
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: selected ? Colors.teal[600] : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: selected ? Colors.teal : Colors.grey.shade300,
+                    width: 2,
+                  ),
+                ),
+                child: Text(
+                  category,
+                  style: TextStyle(
+                    color: selected ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
-            child: Text(
-              category,
-              style: TextStyle(
-                color: selected ? Colors.white : Colors.black87,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 
@@ -209,37 +221,38 @@ class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateM
       crossAxisCount: 4,
       crossAxisSpacing: 8,
       mainAxisSpacing: 8,
-      children: currentHairOptions.map((hair) {
-        final selected = hair == _selectedHair;
-        return GestureDetector(
-          onTap: () {
-            _fadeController.reset();
-            setState(() => _selectedHair = hair);
-            _fadeController.forward();
+      children:
+          currentHairOptions.map((hair) {
+            final selected = hair == _selectedHair;
+            return GestureDetector(
+              onTap: () {
+                _fadeController.reset();
+                setState(() => _selectedHair = hair);
+                _fadeController.forward();
 
-            if (_autoAlignHair && _faces.isNotEmpty) {
-              final face = _faces.first;
-              final rect = face.boundingBox;
-              _hairOffset = Offset(rect.left - 20, rect.top - 60);
-              _hairScale = 1.0;
-              _hairRotation = 0.0;
-            } else {
-              _resetHairPositionToCenter();
-            }
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: selected ? Colors.teal : Colors.grey,
-                width: selected ? 3 : 1,
+                if (_autoAlignHair && _faces.isNotEmpty) {
+                  final face = _faces.first;
+                  final rect = face.boundingBox;
+                  _hairOffset = Offset(rect.left - 20, rect.top - 60);
+                  _hairScale = 1.0;
+                  _hairRotation = 0.0;
+                } else {
+                  _resetHairPositionToCenter();
+                }
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: selected ? Colors.teal : Colors.grey,
+                    width: selected ? 3 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Image.asset(hair, fit: BoxFit.contain),
               ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(4),
-            child: Image.asset(hair, fit: BoxFit.contain),
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 
@@ -248,28 +261,29 @@ class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateM
       crossAxisCount: 4,
       crossAxisSpacing: 8,
       mainAxisSpacing: 8,
-      children: glassesList.map((glass) {
-        final selected = glass == _selectedGlasses;
-        return GestureDetector(
-          onTap: () {
-            setModalState(() {
-              _selectedGlasses = glass;
-            });
-            setState(() {});
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: selected ? Colors.teal : Colors.grey,
-                width: selected ? 3 : 1,
+      children:
+          glassesList.map((glass) {
+            final selected = glass == _selectedGlasses;
+            return GestureDetector(
+              onTap: () {
+                setModalState(() {
+                  _selectedGlasses = glass;
+                });
+                setState(() {});
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: selected ? Colors.teal : Colors.grey,
+                    width: selected ? 3 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Image.asset(glass, fit: BoxFit.contain),
               ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(4),
-            child: Image.asset(glass, fit: BoxFit.contain),
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 
@@ -338,8 +352,14 @@ class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateM
         selectedItemColor: Colors.teal,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.face), label: "Hairstyle"),
-          BottomNavigationBarItem(icon: Icon(Icons.remove_red_eye), label: "Glasses"),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.remove_red_eye),
+            label: "Glasses",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: "Settings",
+          ),
         ],
       ),
     );
@@ -374,85 +394,104 @@ class _TryHairstylesState extends State<TryHairstyles> with TickerProviderStateM
   Widget _buildImagePreview() {
     return Expanded(
       child: Center(
-        child: _capturedImage == null
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.camera_alt_outlined, size: 80, color: Colors.teal[300]),
-                  const SizedBox(height: 12),
-                  Text(
-                    "Tap the camera icon to take a photo.",
-                    style: TextStyle(color: Colors.teal[700], fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              )
-            : LayoutBuilder(
-                builder: (context, constraints) {
-                  final maxWidth = constraints.maxWidth;
-                  final maxHeight = constraints.maxHeight;
-                  return Stack(
-                    children: [
-                      Container(
-                        key: _imageKey,
-                        width: maxWidth,
-                        height: maxHeight,
-                        child: Image.file(_capturedImage!, fit: BoxFit.contain),
-                      ),
-                      if (_faces.isNotEmpty && _selectedHair.isNotEmpty)
-                        Positioned(
-                          left: _hairOffset.dx,
-                          top: _hairOffset.dy,
-                          child: GestureDetector(
-                            onScaleStart: (details) {
-                              _initialFocalPoint = details.focalPoint;
-                              _initialOffset = _hairOffset;
-                              _initialScale = _hairScale;
-                              _initialRotation = _hairRotation;
-                            },
-                            onScaleUpdate: (details) {
-                              setState(() {
-                                if (!_autoAlignHair) {
-                                  final delta = details.focalPoint - _initialFocalPoint;
-                                  _hairOffset = _initialOffset + delta;
-                                }
-                                _hairScale = (_initialScale * details.scale).clamp(0.5, 3.0);
-                                _hairRotation = _initialRotation + details.rotation;
-                              });
-                            },
-                            child: FadeTransition(
-                              opacity: _fadeAnimation,
-                              child: Transform(
-                                alignment: Alignment.center,
-                                transform: Matrix4.identity()
-                                  ..translate(60.0, 60.0)
-                                  ..rotateZ(_hairRotation)
-                                  ..scale(_hairScale)
-                                  ..translate(-60.0, -60.0),
-                                child: SizedBox(
-                                  width: 160,
-                                  height: 160,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      Image.asset(_selectedHair, fit: BoxFit.contain),
-                                    ],
+        child:
+            _capturedImage == null
+                ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.camera_alt_outlined,
+                      size: 80,
+                      color: Colors.teal[300],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Tap the camera icon to take a photo.",
+                      style: TextStyle(color: Colors.teal[700], fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                )
+                : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final maxWidth = constraints.maxWidth;
+                    final maxHeight = constraints.maxHeight;
+                    return Stack(
+                      children: [
+                        Container(
+                          key: _imageKey,
+                          width: maxWidth,
+                          height: maxHeight,
+                          child: Image.file(
+                            _capturedImage!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        if (_faces.isNotEmpty && _selectedHair.isNotEmpty)
+                          Positioned(
+                            left: _hairOffset.dx,
+                            top: _hairOffset.dy,
+                            child: GestureDetector(
+                              onScaleStart: (details) {
+                                _initialFocalPoint = details.focalPoint;
+                                _initialOffset = _hairOffset;
+                                _initialScale = _hairScale;
+                                _initialRotation = _hairRotation;
+                              },
+                              onScaleUpdate: (details) {
+                                setState(() {
+                                  if (!_autoAlignHair) {
+                                    final delta =
+                                        details.focalPoint - _initialFocalPoint;
+                                    _hairOffset = _initialOffset + delta;
+                                  }
+                                  _hairScale = (_initialScale * details.scale)
+                                      .clamp(0.5, 3.0);
+                                  _hairRotation =
+                                      _initialRotation + details.rotation;
+                                });
+                              },
+                              child: FadeTransition(
+                                opacity: _fadeAnimation,
+                                child: Transform(
+                                  alignment: Alignment.center,
+                                  transform:
+                                      Matrix4.identity()
+                                        ..translate(60.0, 60.0)
+                                        ..rotateZ(_hairRotation)
+                                        ..scale(_hairScale)
+                                        ..translate(-60.0, -60.0),
+                                  child: SizedBox(
+                                    width: 160,
+                                    height: 160,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Image.asset(
+                                          _selectedHair,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      if (_selectedGlasses.isNotEmpty)
-                        Positioned(
-                          top: _hairOffset.dy + 80,
-                          left: _hairOffset.dx + 20,
-                          child: Image.asset(_selectedGlasses, width: 100, height: 40),
-                        ),
-                    ],
-                  );
-                },
-              ),
+                        if (_selectedGlasses.isNotEmpty)
+                          Positioned(
+                            top: _hairOffset.dy + 80,
+                            left: _hairOffset.dx + 20,
+                            child: Image.asset(
+                              _selectedGlasses,
+                              width: 100,
+                              height: 40,
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
       ),
     );
   }

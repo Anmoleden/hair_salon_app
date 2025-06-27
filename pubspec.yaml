@@ -26,6 +26,7 @@ dependencies:
   percent_indicator: ^4.2.2 
   intl: ^0.18.0
   screenshot: ^3.0.0
+  image: ^4.0.17
  
 dev_dependencies:
   flutter_test:
@@ -36,8 +37,20 @@ flutter:
   uses-material-design: true
   assets:
     - assets/hairstyle.png
+    - assets/Instruct-image.png
+    - assets/face_classification_model/face_shape_classifier.tflite
     
+    - assets/hairs/short1.png
     - assets/hairs/short2.png
     - assets/hairs/long1.png
+    - assets/hairs/long2.png
     - assets/hairs/med1.png
+    - assets/hairs/med2.png
+    - assets/hairs/f_short1.png
+    - assets/hairs/f_med1.png
+    - assets/hairs/f_long1.png
+    - assets/hairs/f_long2.png
+    - assets/glasses/glass1.png
+    - assets/glasses/glass2.png
+
     

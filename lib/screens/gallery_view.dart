@@ -28,7 +28,6 @@ class GalleryView extends StatefulWidget {
 
 class _GalleryViewState extends State<GalleryView> {
   File? _image;
-  String? _path;
   ImagePicker? _imagePicker;
   String _faceResult = '';
   late final FaceDetector _faceDetector;
@@ -50,104 +49,47 @@ class _GalleryViewState extends State<GalleryView> {
 
   @override
   Widget build(BuildContext context) {
-    final bool showCropButton =
-        _faceResult.startsWith('1 face') && _image != null;
-
     return Scaffold(
-      appBar: AppBar(
-        // Using a gradient color for the AppBar
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFff4081), Color(0xFFff80ab)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      backgroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(38),
+        child: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            widget.title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
             ),
           ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Icon(
+                Platform.isIOS ? Icons.camera_alt_outlined : Icons.camera,
+                color: Colors.black54,
+                size: 20,
+              ),
+              onPressed: widget.onDetectorViewModeChanged,
+            ),
+          ],
+          toolbarHeight: 38,
         ),
-        title: Text(widget.title),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Platform.isIOS ? Icons.camera_alt_outlined : Icons.camera,
-            ),
-            onPressed: widget.onDetectorViewModeChanged,
-          ),
-        ],
       ),
-      body: Stack(
+      body: Column(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF2193b0),
-                  Color(0xFF6dd5ed),
-                ], // Bluish gradient
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: _buildImagePreview(),
             ),
           ),
-          _buildBody(),
-          if (showCropButton)
-            Positioned(
-              bottom: 32,
-              right: 32,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => ImageCropperScreen(imageFile: _image!),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFff4081), Color(0xFFff80ab)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        offset: Offset(2, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildImagePreview(),
-          const SizedBox(height: 24),
           _buildResultDisplay(),
-          const SizedBox(height: 32),
-          _buildActionButtons(),
+          const SizedBox(height: 12),
+          _buildActionButtonsGrid(),
           const SizedBox(height: 24),
-          _buildPathInfo(),
         ],
       ),
     );
@@ -155,7 +97,6 @@ class _GalleryViewState extends State<GalleryView> {
 
   Widget _buildImagePreview() {
     return Container(
-      height: 300,
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.grey[200],
@@ -165,18 +106,31 @@ class _GalleryViewState extends State<GalleryView> {
           _image != null
               ? ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.file(_image!, fit: BoxFit.cover),
+                child: Image.file(_image!, fit: BoxFit.contain),
               )
-              : const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.image, size: 80, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'No image selected',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
+              : Padding(
+                padding: const EdgeInsets.all(0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(0),
+                        child: Image.asset(
+                          'assets/Instruct-image.png',
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: double.infinity,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Please select or capture an image to begin.',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
     );
   }
@@ -213,82 +167,65 @@ class _GalleryViewState extends State<GalleryView> {
     );
   }
 
-  Widget _buildActionButtons() {
-    return Column(
-      children: [
-        _buildActionButton(
-          'Pick from Gallery',
-          Icons.photo_library,
-          () => _getImage(ImageSource.gallery),
-        ),
-        const SizedBox(height: 16),
-        _buildActionButton(
-          'Take a Picture',
-          Icons.camera_alt,
-          () => _getImage(ImageSource.camera),
-        ),
-        const SizedBox(height: 16),
-        _buildActionButton(
-          'Choose Sample Image',
-          Icons.photo_album,
-          _getImageAsset,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(
-    String text,
-    IconData icon,
-    VoidCallback onPressed,
-  ) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2193b0), Color(0xFF6dd5ed)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(1, 2)),
+  Widget _buildActionButtonsGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildSquareButton(
+            'Gallery',
+            Icons.photo_library,
+            () => _getImage(ImageSource.gallery),
+          ),
+          _buildSquareButton(
+            'Camera',
+            Icons.camera_alt,
+            () => _getImage(ImageSource.camera),
+          ),
+          _buildSquareButton('Samples', Icons.photo_album, _getImageAsset),
         ],
       ),
-      child: ElevatedButton.icon(
-        icon: Icon(icon, color: Colors.white),
-        label: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.1,
-          ),
-        ),
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-      ),
     );
   }
 
-  Widget _buildPathInfo() {
-    return const SizedBox.shrink();
-    // This widget can be used to display the file path or any other information
+  Widget _buildSquareButton(String text, IconData icon, VoidCallback onTap) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 90,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 32, color: Colors.black54),
+                const SizedBox(height: 8),
+                Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _getImage(ImageSource source) async {
     setState(() {
       _image = null;
-      _path = null;
       _faceResult = '';
     });
 
@@ -367,7 +304,6 @@ class _GalleryViewState extends State<GalleryView> {
   Future<void> _processFile(String path) async {
     setState(() {
       _image = File(path);
-      _path = path;
       _faceResult = 'Analyzing...';
     });
 
@@ -383,6 +319,17 @@ class _GalleryViewState extends State<GalleryView> {
       });
 
       widget.onImage(inputImage);
+
+      if (_image != null && faces.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ImageCropperScreen(imageFile: _image!),
+            ),
+          );
+        });
+      }
     } catch (e) {
       setState(() => _faceResult = 'Error processing image');
     }
