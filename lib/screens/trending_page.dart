@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../models/hairstyle_model.dart';
-import '../models/filters_model.dart';
+import '../classifiers/hairstyle_model.dart';
+import '../classifiers/filters_model.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../screens/hairstyle_details_screen.dart';
-import '../screens/try_on_screen.dart';
 
 class TrendingPage extends StatefulWidget {
   final bool showFavoritesOnly;
@@ -320,15 +319,7 @@ class _TrendingPageState extends State<TrendingPage> {
                                       width: double.infinity,
                                       child: ElevatedButton(
                                         onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (_) => TryOnScreen(
-                                                    hairstyle: style,
-                                                  ),
-                                            ),
-                                          );
+                                          // TODO: TryOnScreen removed. Navigation removed or replace with another screen.
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.white,

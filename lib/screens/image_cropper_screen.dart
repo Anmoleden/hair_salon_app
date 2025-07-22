@@ -1,12 +1,21 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
-import '../models/face_classifier.dart';
+import '../classifiers/face_classifier.dart';
+// import '../classifiers/gender_classifier.dart';
+import 'try_hairstyles.dart';
+import 'result_screen.dart';
 
 class ImageCropperScreen extends StatefulWidget {
   final File imageFile;
+  final bool isTryHairstyleFlow;
 
-  const ImageCropperScreen({super.key, required this.imageFile});
+  const ImageCropperScreen({
+    super.key,
+    required this.imageFile,
+    required this.isTryHairstyleFlow,
+  });
 
   @override
   State<ImageCropperScreen> createState() => _ImageCropperScreenState();
@@ -15,6 +24,7 @@ class ImageCropperScreen extends StatefulWidget {
 class _ImageCropperScreenState extends State<ImageCropperScreen> {
   CroppedFile? _croppedFile;
   Map<String, dynamic>? _classificationResult;
+  // String? _genderResult;
   bool _isClassifying = false;
 
   @override
@@ -30,14 +40,22 @@ class _ImageCropperScreenState extends State<ImageCropperScreen> {
       uiSettings.add(
         AndroidUiSettings(
           toolbarTitle: 'Crop Image',
-          toolbarColor: Colors.deepOrange,
-          toolbarWidgetColor: Colors.white,
-          initAspectRatio: CropAspectRatioPreset.original,
-          lockAspectRatio: false,
+          toolbarColor: Colors.white,
+          toolbarWidgetColor: Colors.black,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+          aspectRatioPresets: [CropAspectRatioPreset.square],
         ),
       );
     } else if (Platform.isIOS) {
-      uiSettings.add(IOSUiSettings(title: 'Crop Image'));
+      uiSettings.add(
+        IOSUiSettings(
+          title: 'Crop Image',
+          aspectRatioLockEnabled: true,
+          aspectRatioPickerButtonHidden: true,
+          minimumAspectRatio: 1.0,
+        ),
+      );
     }
 
     final croppedFile = await ImageCropper().cropImage(
@@ -47,22 +65,53 @@ class _ImageCropperScreenState extends State<ImageCropperScreen> {
       uiSettings: uiSettings,
     );
 
-    if (!mounted) return;
-
     if (croppedFile != null) {
-      setState(() {
-        _croppedFile = croppedFile;
-        _isClassifying = true;
-      });
-      await ImageClassifier.loadModel();
-      final result = await ImageClassifier.classifyImage(
-        File(croppedFile.path),
-      );
-      if (!mounted) return;
-      setState(() {
-        _classificationResult = result;
-        _isClassifying = false;
-      });
+      if (widget.isTryHairstyleFlow) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) =>
+                    TryHairstyles(croppedImage: File(croppedFile.path)),
+          ),
+        );
+        return;
+      } else {
+        setState(() {
+          _croppedFile = croppedFile;
+          _isClassifying = true;
+        });
+        try {
+          print('Starting classification...');
+          final result = await ImageClassifier.classifyImage(
+            File(croppedFile.path),
+          );
+          print('Classification result: $result');
+          if (!mounted) return;
+          setState(() {
+            _classificationResult = result;
+            _isClassifying = false;
+          });
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => ResultScreen(
+                    croppedFile: File(croppedFile.path),
+                    classificationResult: result,
+                  ),
+            ),
+          );
+        } catch (e, stack) {
+          print('Classification error: $e');
+          print(stack);
+          setState(() {
+            _classificationResult = {'error': e.toString()};
+            _isClassifying = false;
+          });
+        }
+      }
     } else {
       ScaffoldMessenger.of(
         context,
@@ -74,17 +123,23 @@ class _ImageCropperScreenState extends State<ImageCropperScreen> {
   Widget build(BuildContext context) {
     if (_croppedFile != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Cropped Image')),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          title: const Text(
+            'Cropped Image',
+            style: TextStyle(color: Colors.black),
+          ),
+          iconTheme: const IconThemeData(color: Colors.black),
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image.file(File(_croppedFile!.path)),
               const SizedBox(height: 24),
-              if (_isClassifying)
-                const CircularProgressIndicator()
-              else if (_classificationResult != null)
-                _buildResultWidget(_classificationResult!),
+              if (_isClassifying) const CircularProgressIndicator(),
+              // else if (_classificationResult != null)
+              //   _buildResultWidget(_classificationResult!),
             ],
           ),
         ),
@@ -107,6 +162,8 @@ class _ImageCropperScreenState extends State<ImageCropperScreen> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         Text('Confidence: ${(result['confidence'] * 100).toStringAsFixed(2)}%'),
+        // if (_genderResult != null)
+        //   Text('Gender: $_genderResult', style: const TextStyle(fontSize: 18)),
       ],
     );
   }

@@ -90,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             title: 'Gallery',
                             onImage: (InputImage inputImage) async {},
                             onDetectorViewModeChanged: () {},
+                            isTryHairstyleFlow: false,
                           ),
                     ),
                   );
@@ -100,7 +101,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const TryHairstyles(),
+                      builder:
+                          (context) => GalleryView(
+                            title: 'Gallery',
+                            onImage: (InputImage inputImage) async {},
+                            onDetectorViewModeChanged: () {},
+                            isTryHairstyleFlow: true,
+                          ),
                     ),
                   );
                 },
@@ -191,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               title: 'Gallery',
                               onImage: (inputImage) {},
                               onDetectorViewModeChanged: () {},
+                              isTryHairstyleFlow: false,
                             ),
                       ),
                     );

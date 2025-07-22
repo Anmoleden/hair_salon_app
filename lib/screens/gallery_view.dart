@@ -9,12 +9,14 @@ import 'package:hair_salon/screens/image_cropper_screen.dart';
 import 'utils.dart';
 
 class GalleryView extends StatefulWidget {
+  final bool isTryHairstyleFlow;
   const GalleryView({
     super.key,
     required this.title,
     this.text,
     required this.onImage,
     required this.onDetectorViewModeChanged,
+    required this.isTryHairstyleFlow,
   });
 
   final String title;
@@ -325,7 +327,11 @@ class _GalleryViewState extends State<GalleryView> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ImageCropperScreen(imageFile: _image!),
+              builder:
+                  (context) => ImageCropperScreen(
+                    imageFile: _image!,
+                    isTryHairstyleFlow: widget.isTryHairstyleFlow,
+                  ),
             ),
           );
         });

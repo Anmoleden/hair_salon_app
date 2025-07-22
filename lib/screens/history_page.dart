@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../models/hairstyle_model.dart';
-import 'try_on_screen.dart';
+import '../classifiers/hairstyle_model.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -176,12 +175,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       ),
                       trailing: ElevatedButton(
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => TryOnScreen(hairstyle: style),
-                            ),
-                          );
+                          // TODO: TryOnScreen removed. Navigation removed or replace with another screen.
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,

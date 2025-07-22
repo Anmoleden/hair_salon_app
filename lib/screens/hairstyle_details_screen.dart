@@ -3,8 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
-import '../models/hairstyle_model.dart';
-import 'try_on_screen.dart';
+import '../classifiers/hairstyle_model.dart';
 
 class HairstyleDetailsScreen extends StatefulWidget {
   final Hairstyle hairstyle;
@@ -52,10 +51,13 @@ class _HairstyleDetailsScreenState extends State<HairstyleDetailsScreen> {
                   width: double.infinity,
                   height: 260,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(
-                    height: 260,
-                    child: Center(child: Icon(Icons.broken_image, size: 50)),
-                  ),
+                  errorBuilder:
+                      (_, __, ___) => const SizedBox(
+                        height: 260,
+                        child: Center(
+                          child: Icon(Icons.broken_image, size: 50),
+                        ),
+                      ),
                 ),
                 // Heart and Share buttons
                 Positioned(
@@ -115,9 +117,11 @@ class _HairstyleDetailsScreenState extends State<HairstyleDetailsScreen> {
                     children: [
                       _buildTag(hairstyle.gender),
                       _buildTag(hairstyle.length),
-                      if (hairstyle.tags.contains('Straight')) _buildTag('Straight'),
+                      if (hairstyle.tags.contains('Straight'))
+                        _buildTag('Straight'),
                       if (hairstyle.tags.contains('Wavy')) _buildTag('Wavy'),
-                      if (hairstyle.isTrending) _buildTag('Trending', color: Colors.pinkAccent),
+                      if (hairstyle.isTrending)
+                        _buildTag('Trending', color: Colors.pinkAccent),
                     ],
                   ),
 
@@ -197,12 +201,7 @@ class _HairstyleDetailsScreenState extends State<HairstyleDetailsScreen> {
                         backgroundColor: Colors.transparent,
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TryOnScreen(hairstyle: hairstyle),
-                          ),
-                        );
+                        // TODO: TryOnScreen removed. Navigation removed or replace with another screen.
                       },
                       child: Ink(
                         decoration: BoxDecoration(
@@ -238,9 +237,7 @@ class _HairstyleDetailsScreenState extends State<HairstyleDetailsScreen> {
   Widget _buildTag(String text, {Color color = const Color(0xFFF4F4F4)}) {
     return Chip(
       backgroundColor: color,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       label: Text(
         text,
         style: GoogleFonts.poppins(

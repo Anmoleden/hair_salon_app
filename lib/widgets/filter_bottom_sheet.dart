@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/filters_model.dart';
+import '../classifiers/filters_model.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final Filters currentFilters;
