@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:hair_salon/screens/image_cropper_screen.dart';
+import 'package:hair_salon/screens/try_hairstyles.dart';
 import 'utils.dart';
 
 class GalleryView extends StatefulWidget {
@@ -15,12 +16,14 @@ class GalleryView extends StatefulWidget {
     this.text,
     required this.onImage,
     required this.onDetectorViewModeChanged,
+    this.navigateToTryHairstyle = false, // New parameter to control navigation
   });
 
   final String title;
   final String? text;
   final Function(InputImage inputImage) onImage;
   final Function()? onDetectorViewModeChanged;
+  final bool navigateToTryHairstyle; // Determines if should navigate to TryHairstyles
 
   @override
   State<GalleryView> createState() => _GalleryViewState();
@@ -32,13 +35,18 @@ class _GalleryViewState extends State<GalleryView> {
   ImagePicker? _imagePicker;
   String _faceResult = '';
   late final FaceDetector _faceDetector;
+  bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
     _imagePicker = ImagePicker();
     _faceDetector = FaceDetector(
-      options: FaceDetectorOptions(enableContours: true, enableLandmarks: true),
+      options: FaceDetectorOptions(
+        enableContours: true,
+        enableLandmarks: true,
+        performanceMode: FaceDetectorMode.accurate,
+      ),
     );
   }
 
@@ -48,93 +56,91 @@ class _GalleryViewState extends State<GalleryView> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final bool showCropButton =
-        _faceResult.startsWith('1 face') && _image != null;
+ @override
+Widget build(BuildContext context) {
+  final bool showCropButton = _faceResult.startsWith('1 face') && _image != null;
 
-    return Scaffold(
-      appBar: AppBar(
-        // Using a gradient color for the AppBar
-        flexibleSpace: Container(
+  return Scaffold(
+    appBar: AppBar(
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFff4081), Color(0xFFff80ab)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ),
+      title: Text(widget.title),
+      actions: [
+        IconButton(
+          icon: Icon(
+            Platform.isIOS ? Icons.camera_alt_outlined : Icons.camera,
+          ),
+          onPressed: widget.onDetectorViewModeChanged,
+        ),
+      ],
+    ),
+    body: Stack(
+      children: [
+        Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFFff4081), Color(0xFFff80ab)],
+              colors: [
+                Color(0xFF2193b0),
+                Color(0xFF6dd5ed),
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
-        title: Text(widget.title),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Platform.isIOS ? Icons.camera_alt_outlined : Icons.camera,
-            ),
-            onPressed: widget.onDetectorViewModeChanged,
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF2193b0),
-                  Color(0xFF6dd5ed),
-                ], // Bluish gradient
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          _buildBody(),
-          if (showCropButton)
-            Positioned(
-              bottom: 32,
-              right: 32,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => ImageCropperScreen(imageFile: _image!),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFff4081), Color(0xFFff80ab)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        offset: Offset(2, 4),
-                      ),
-                    ],
+        _buildBody(),
+        if (_isProcessing)
+          const Center(child: CircularProgressIndicator()),
+        if (showCropButton)
+          Positioned(
+            bottom: 32,
+            right: 32,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ImageCropperScreen(imageFile: _image!),
                   ),
-                  child: const Icon(
-                    Icons.arrow_forward,
-                    color: Colors.white,
-                    size: 32,
+                );
+              },
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFff4081), Color(0xFFff80ab)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 8,
+                      offset: Offset(2, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                  size: 32,
                 ),
               ),
             ),
-        ],
-      ),
-    );
-  }
-
+          ),
+      ],
+    ),
+  );
+}
   Widget _buildBody() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -147,7 +153,6 @@ class _GalleryViewState extends State<GalleryView> {
           const SizedBox(height: 32),
           _buildActionButtons(),
           const SizedBox(height: 24),
-          _buildPathInfo(),
         ],
       ),
     );
@@ -161,39 +166,36 @@ class _GalleryViewState extends State<GalleryView> {
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(16),
       ),
-      child:
-          _image != null
-              ? ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.file(_image!, fit: BoxFit.cover),
-              )
-              : const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.image, size: 80, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'No image selected',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
+      child: _image != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.file(_image!, fit: BoxFit.cover),
+            )
+          : const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.image, size: 80, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'No image selected',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
     );
   }
 
   Widget _buildResultDisplay() {
     if (_faceResult.isEmpty) return const SizedBox.shrink();
 
-    // Remove the old crop button logic here!
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color:
-                _faceResult.contains('No face')
-                    ? Colors.orange[100]
-                    : Colors.green[100],
+            color: _faceResult.contains('No face')
+                ? Colors.orange[100]
+                : Colors.green[100],
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
@@ -201,14 +203,35 @@ class _GalleryViewState extends State<GalleryView> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w500,
-              color:
-                  _faceResult.contains('No face')
-                      ? Colors.orange[800]
-                      : Colors.green[800],
+              color: _faceResult.contains('No face')
+                  ? Colors.orange[800]
+                  : Colors.green[800],
             ),
             textAlign: TextAlign.center,
           ),
         ),
+        if (_faceResult.startsWith('1 face') && !widget.navigateToTryHairstyle)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.pinkAccent,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TryHairstyles(initialImage: _image!),
+                  ),
+                );
+              },
+              child: const Text(
+                'Try Hairstyles with This Image',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -280,45 +303,61 @@ class _GalleryViewState extends State<GalleryView> {
     );
   }
 
-  Widget _buildPathInfo() {
-    return const SizedBox.shrink();
-    // This widget can be used to display the file path or any other information
-  }
-
   Future<void> _getImage(ImageSource source) async {
     setState(() {
       _image = null;
       _path = null;
       _faceResult = '';
+      _isProcessing = true;
     });
 
-    final pickedFile = await _imagePicker?.pickImage(source: source);
-    if (pickedFile != null) {
-      _processFile(pickedFile.path);
+    try {
+      final pickedFile = await _imagePicker?.pickImage(source: source);
+      if (pickedFile != null) {
+        await _processFile(pickedFile.path);
+      }
+    } catch (e) {
+      setState(() => _faceResult = 'Error selecting image');
+    } finally {
+      setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _getImageAsset() async {
-    final manifestContent = await rootBundle.loadString('AssetManifest.json');
-    final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-    final assets =
-        manifestMap.keys
-            .where((key) => key.contains('images/'))
-            .where(
-              (key) =>
-                  key.endsWith('.jpg') ||
-                  key.endsWith('.jpeg') ||
-                  key.endsWith('.png') ||
-                  key.endsWith('.webp'),
-            )
-            .toList();
+    setState(() {
+      _image = null;
+      _path = null;
+      _faceResult = '';
+      _isProcessing = true;
+    });
 
-    if (!mounted) return;
+    try {
+      final manifestContent = await rootBundle.loadString('AssetManifest.json');
+      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
+      final assets = manifestMap.keys
+          .where((key) => key.contains('images/'))
+          .where((key) =>
+              key.endsWith('.jpg') ||
+              key.endsWith('.jpeg') ||
+              key.endsWith('.png') ||
+              key.endsWith('.webp'))
+          .toList();
 
-    showDialog(
-      context: context,
-      builder: (context) => _buildAssetDialog(assets),
-    );
+      if (!mounted) return;
+
+      final selectedPath = await showDialog<String>(
+        context: context,
+        builder: (context) => _buildAssetDialog(assets),
+      );
+
+      if (selectedPath != null) {
+        await _processFile(await getAssetPath(selectedPath));
+      }
+    } catch (e) {
+      setState(() => _faceResult = 'Error loading sample image');
+    } finally {
+      setState(() => _isProcessing = false);
+    }
   }
 
   Widget _buildAssetDialog(List<String> assets) {
@@ -357,10 +396,7 @@ class _GalleryViewState extends State<GalleryView> {
     return ListTile(
       leading: Image.asset(path, width: 50, height: 50, fit: BoxFit.cover),
       title: Text(path.split('/').last),
-      onTap: () async {
-        Navigator.pop(context);
-        _processFile(await getAssetPath(path));
-      },
+      onTap: () => Navigator.pop(context, path),
     );
   }
 
@@ -369,6 +405,7 @@ class _GalleryViewState extends State<GalleryView> {
       _image = File(path);
       _path = path;
       _faceResult = 'Analyzing...';
+      _isProcessing = true;
     });
 
     try {
@@ -376,15 +413,26 @@ class _GalleryViewState extends State<GalleryView> {
       final faces = await _faceDetector.processImage(inputImage);
 
       setState(() {
-        _faceResult =
-            faces.isEmpty
-                ? 'No faces detected'
-                : '${faces.length} ${faces.length == 1 ? 'face' : 'faces'} detected';
+        _faceResult = faces.isEmpty
+            ? 'No faces detected'
+            : '${faces.length} ${faces.length == 1 ? 'face' : 'faces'} detected';
       });
 
       widget.onImage(inputImage);
+
+      // Auto-navigate if in hairstyle mode and exactly one face detected
+      if (widget.navigateToTryHairstyle && faces.length == 1) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TryHairstyles(initialImage: File(path)),
+          ),
+        );
+      }
     } catch (e) {
       setState(() => _faceResult = 'Error processing image');
+    } finally {
+      setState(() => _isProcessing = false);
     }
   }
 }

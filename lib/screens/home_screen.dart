@@ -3,8 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hair_salon/screens/gallery_view.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import 'trending_page.dart';
-import 'try_hairstyles.dart';
+
 import 'history_page.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required String loginMethod});
@@ -99,7 +100,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const TryHairstyles(),
+                      builder: (context) => GalleryView(
+  title: 'Try Hairstyles',
+  onImage: (inputImage) {}, // Can be empty if using auto-navigation
+  onDetectorViewModeChanged: () {},
+  navigateToTryHairstyle: true,
+)
                     ),
                   );
                 },

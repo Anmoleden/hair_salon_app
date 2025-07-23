@@ -26,10 +26,9 @@ dependencies:
   percent_indicator: ^4.2.2 
   intl: ^0.18.0
   screenshot: ^3.0.0
- 
-  
-
- 
+  image: ^4.0.17
+  url_launcher: ^6.2.6
+  pro_image_editor: ^10.5.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -2,15 +2,22 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:path_provider/path_provider.dart';
-import 'take_photo_page.dart';
+import 'package:image/image.dart' as img;
 
 class TryHairstyles extends StatefulWidget {
-  const TryHairstyles({super.key});
+  final File initialImage;
+  final bool isFromCamera;
+
+  const TryHairstyles({
+    super.key, 
+    required this.initialImage,
+    this.isFromCamera = false,
+  });
 
   @override
   State<TryHairstyles> createState() => _TryHairstylesState();
@@ -18,15 +25,16 @@ class TryHairstyles extends StatefulWidget {
 
 class _TryHairstylesState extends State<TryHairstyles>
     with TickerProviderStateMixin {
-  List<CameraDescription>? _cameras;
   late final FaceDetector _faceDetector;
   List<Face> _faces = [];
-  File? _capturedImage;
+  late File _capturedImage;
+  File? _processedImage;
 
   bool _isMale = true;
   bool _autoAlignHair = true;
   String selectedCategory = "Short";
   int _selectedBottomTab = 0;
+  bool _isProcessing = false;
 
   Offset _hairOffset = const Offset(100, 150);
   double _hairScaleX = 1.0;
@@ -36,28 +44,33 @@ class _TryHairstylesState extends State<TryHairstyles>
   bool _isRotating = false;
 
   final GlobalKey _imageKey = GlobalKey();
-  String resultText = "Tap the camera icon to take a photo.";
+  String resultText = "Adjust your hairstyle";
   String _selectedHair = '';
   String _selectedGlasses = '';
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
-  // Rotation handling
   Offset? _rotationStartVector;
   double _initialRotation = 0;
   Offset? _rotationCenter;
+  double _initialScale = 1.0;
+  Offset _initialOffset = Offset.zero;
 
   final Map<String, List<String>> maleHairs = {
-    "Short": ['assets/hairs/short1.png', 'assets/hairs/short2.png'],
-    "Medium": ['assets/hairs/med1.png', 'assets/hairs/med2.png'],
-    "Long": ['assets/hairs/long1.png'],
+    "Oval": ['assets/hairs/short1.png', 'assets/hairs/short2.png'],
+    "Round": ['assets/hairs/med1.png', 'assets/hairs/med2.png'],
+    "Square": ['assets/hairs/long1.png'],
+     "Heart": ['assets/hairs/long1.png'],
+      "Oblong": ['assets/hairs/long1.png'],
   };
 
   final Map<String, List<String>> femaleHairs = {
-    "Short": ['assets/hairs/f_short1.png'],
-    "Medium": ['assets/hairs/f_med1.png'],
-    "Long": ['assets/hairs/f_long1.png', 'assets/hairs/f_long2.png'],
+    "Oval": ['assets/hairs/f_short1.png'],
+    "Round": ['assets/hairs/f_med1.png'],
+    "Square": ['assets/hairs/f_long1.png', 'assets/hairs/f_long2.png'],
+    "Heart": ['assets/hairs/f_med1.png'],
+    "Oblong": ['assets/hairs/f_med1.png'],
   };
 
   final List<String> glassesList = [
@@ -66,14 +79,12 @@ class _TryHairstylesState extends State<TryHairstyles>
   ];
 
   List<String> get currentHairOptions =>
-      _isMale
-          ? maleHairs[selectedCategory] ?? []
-          : femaleHairs[selectedCategory] ?? [];
+      _isMale ? maleHairs[selectedCategory] ?? [] : femaleHairs[selectedCategory] ?? [];
 
   @override
   void initState() {
     super.initState();
-    _initCamera();
+    _capturedImage = widget.initialImage;
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
         performanceMode: FaceDetectorMode.accurate,
@@ -81,6 +92,7 @@ class _TryHairstylesState extends State<TryHairstyles>
         enableContours: true,
       ),
     );
+    _initializeFaceDetection();
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -91,77 +103,111 @@ class _TryHairstylesState extends State<TryHairstyles>
     );
   }
 
-  Future<void> _initCamera() async {
-    _cameras = await availableCameras();
+  Future<File> _fixImageOrientation(File file) async {
+    try {
+      final byteData = await file.readAsBytes();
+      Uint8List bytes = byteData.buffer.asUint8List();
+      
+      // Decode the image
+      img.Image? originalImage = img.decodeImage(bytes);
+      if (originalImage == null) return file;
+
+      // Handle EXIF orientation for camera photos
+      if (widget.isFromCamera) {
+        originalImage = img.copyRotate(originalImage, angle: 0); // Reset orientation
+      }
+
+      // Resize to reasonable dimensions while maintaining aspect ratio
+      const maxWidth = 1000;
+      final ratio = maxWidth / originalImage.width;
+      final height = (originalImage.height * ratio).round();
+
+      final fixedImage = img.copyResize(
+        originalImage,
+        width: maxWidth,
+        height: height,
+        maintainAspect: true,
+      );
+
+      final tempDir = await getTemporaryDirectory();
+      final fixedFile = File(
+        '${tempDir.path}/fixed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      await fixedFile.writeAsBytes(img.encodeJpg(fixedImage));
+
+      return fixedFile;
+    } catch (e) {
+      debugPrint('Error fixing image orientation: $e');
+      return file;
+    }
   }
 
-  Future<void> _captureFromCamera() async {
-    if (_cameras == null || _cameras!.isEmpty) {
+  Future<void> _initializeFaceDetection() async {
+    if (mounted) {
       setState(() {
-        resultText = "No cameras found on this device.";
+        _isProcessing = true;
+        resultText = "Processing image...";
       });
-      return;
     }
 
-    final frontCamera = _cameras!.firstWhere(
-      (camera) => camera.lensDirection == CameraLensDirection.front,
-      orElse: () => _cameras!.first,
-    );
-
-    final image = await Navigator.push<File?>(
-      context,
-      MaterialPageRoute(builder: (_) => TakePhotoPage(camera: frontCamera)),
-    );
-
-    if (image != null) {
-      final inputImage = InputImage.fromFile(image);
+    try {
+      _processedImage = await _fixImageOrientation(_capturedImage);
+      final inputImage = InputImage.fromFile(_processedImage!);
       final faces = await _faceDetector.processImage(inputImage);
 
-      setState(() {
-        _capturedImage = image;
-        _faces = faces;
-        resultText =
-            faces.isEmpty
-                ? "No face found. Try again."
-                : "Face detected! Drag, resize or rotate hair.";
+      if (mounted) {
+        setState(() {
+          _faces = faces;
+          resultText = faces.isEmpty
+              ? "No face found. Position hair manually."
+              : "Face detected! Adjust your hairstyle.";
 
-        if (_autoAlignHair && faces.isNotEmpty) {
-          final face = faces.first;
-          final rect = face.boundingBox;
-          _hairOffset = Offset(rect.left - 20, rect.top - 60);
-          _hairScaleX = 1.0;
-          _hairScaleY = 1.0;
-          _hairRotation = 0.0;
-          _isHairBeingEdited = true;
-        } else {
-          _resetHairPositionToCenter();
-        }
-      });
+          if (_autoAlignHair && faces.isNotEmpty) {
+            final face = faces.first;
+            final rect = face.boundingBox;
+            _hairOffset = Offset(
+              rect.left - 20,
+              rect.top - 60,
+            );
+            _hairScaleX = 1.0;
+            _hairScaleY = 1.0;
+            _hairRotation = 0.0;
+          } else {
+            _resetHairPositionToCenter();
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => resultText = "Error processing image: ${e.toString()}");
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   void _resetHairPositionToCenter() {
     final context = _imageKey.currentContext;
     if (context != null) {
-      final box = context.findRenderObject() as RenderBox;
-      final size = box.size;
-      setState(() {
-        _hairOffset = Offset(size.width / 2 - 60, size.height / 2 - 60);
-        _hairScaleX = 1.0;
-        _hairScaleY = 1.0;
-        _hairRotation = 0.0;
-        _isHairBeingEdited = true;
-      });
+      final box = context.findRenderObject() as RenderBox?;
+      if (box != null) {
+        final size = box.size;
+        setState(() {
+          _hairOffset = Offset(size.width / 2 - 60, size.height / 2 - 60);
+          _hairScaleX = 1.0;
+          _hairScaleY = 1.0;
+          _hairRotation = 0.0;
+          _isHairBeingEdited = true;
+        });
+      }
     }
   }
 
   Future<void> _saveImage() async {
     try {
-      if (_capturedImage == null || _selectedHair.isEmpty) return;
+      if (_selectedHair.isEmpty) return;
 
-      final boundary =
-          _imageKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
+      final boundary = _imageKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return;
 
       final image = await boundary.toImage(pixelRatio: 3.0);
@@ -174,39 +220,35 @@ class _TryHairstylesState extends State<TryHairstyles>
       final imagePath = '${directory.path}/hairstyle_$timestamp.png';
       await File(imagePath).writeAsBytes(pngBytes);
 
-      // ✅ Success Dialog
       if (mounted) {
         showDialog(
           context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('✅ Success'),
-                content: Text('Image saved successfully at:\n$imagePath'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('OK'),
-                  ),
-                ],
+          builder: (context) => AlertDialog(
+            title: const Text('✅ Success'),
+            content: Text('Image saved successfully at:\n$imagePath'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
               ),
+            ],
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        // ❌ Failed Dialog
         showDialog(
           context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('❌ Failed'),
-                content: Text('Failed to save image:\n${e.toString()}'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('OK'),
-                  ),
-                ],
+          builder: (context) => AlertDialog(
+            title: const Text('❌ Failed'),
+            content: Text('Failed to save image:\n${e.toString()}'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
               ),
+            ],
+          ),
         );
       }
     }
@@ -259,147 +301,117 @@ class _TryHairstylesState extends State<TryHairstyles>
       case "Glasses":
         return _buildGlassesGrid(setModalState);
       default:
-        return _buildSettings();
+        return const SizedBox();
     }
   }
 
   Widget _buildCategoryTabs(void Function(void Function()) setModalState) {
     final Map<String, List<String>> hairMap = _isMale ? maleHairs : femaleHairs;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children:
-          hairMap.keys.map((category) {
-            final selected = selectedCategory == category;
-            return GestureDetector(
-              onTap: () {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: hairMap.keys.map((category) {
+          final selected = selectedCategory == category;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: ChoiceChip(
+              label: Text(category),
+              selected: selected,
+              onSelected: (isSelected) {
                 setModalState(() {
                   selectedCategory = category;
                   _selectedHair = '';
                 });
                 setState(() {});
               },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: selected ? Colors.teal[600] : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: selected ? Colors.teal : Colors.grey.shade300,
-                    width: 2,
-                  ),
-                ),
-                child: Text(
-                  category,
-                  style: TextStyle(
-                    color: selected ? Colors.white : Colors.black87,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              selectedColor: Colors.teal,
+              labelStyle: TextStyle(
+                color: selected ? Colors.white : Colors.black,
               ),
-            );
-          }).toList(),
+              backgroundColor: Colors.grey[200],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
   Widget _buildHairSelectorGrid() {
     return GridView.count(
-      crossAxisCount: 4,
+      crossAxisCount: 3,
       crossAxisSpacing: 8,
       mainAxisSpacing: 8,
-      children:
-          currentHairOptions.map((hair) {
-            final selected = hair == _selectedHair;
-            return GestureDetector(
-              onTap: () {
-                _fadeController.reset();
-                setState(() {
-                  _selectedHair = hair;
-                  _isHairBeingEdited = true;
-                });
-                _fadeController.forward();
+      children: currentHairOptions.map((hair) {
+        final selected = hair == _selectedHair;
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            _fadeController.reset();
+            setState(() {
+              _selectedHair = hair;
+              _isHairBeingEdited = true;
+            });
+            _fadeController.forward();
 
-                if (_autoAlignHair && _faces.isNotEmpty) {
-                  final face = _faces.first;
-                  final rect = face.boundingBox;
-                  _hairOffset = Offset(rect.left - 20, rect.top - 60);
-                  _hairScaleX = 1.0;
-                  _hairScaleY = 1.0;
-                  _hairRotation = 0.0;
-                } else {
-                  _resetHairPositionToCenter();
-                }
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: selected ? Colors.teal : Colors.grey,
-                    width: selected ? 3 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Image.asset(hair, fit: BoxFit.contain),
+            if (_autoAlignHair && _faces.isNotEmpty) {
+              final face = _faces.first;
+              final rect = face.boundingBox;
+              _hairOffset = Offset(
+                rect.left - 20,
+                rect.top - 60,
+              );
+              _hairScaleX = 1.0;
+              _hairScaleY = 1.0;
+              _hairRotation = 0.0;
+            } else {
+              _resetHairPositionToCenter();
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: selected ? Colors.teal : Colors.grey,
+                width: selected ? 3 : 1,
               ),
-            );
-          }).toList(),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: Image.asset(hair, fit: BoxFit.contain),
+          ),
+        );
+      }).toList(),
     );
   }
 
   Widget _buildGlassesGrid(void Function(void Function()) setModalState) {
     return GridView.count(
-      crossAxisCount: 4,
+      crossAxisCount: 3,
       crossAxisSpacing: 8,
       mainAxisSpacing: 8,
-      children:
-          glassesList.map((glass) {
-            final selected = glass == _selectedGlasses;
-            return GestureDetector(
-              onTap: () {
-                setModalState(() {
-                  _selectedGlasses = glass;
-                });
-                setState(() {});
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: selected ? Colors.teal : Colors.grey,
-                    width: selected ? 3 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Image.asset(glass, fit: BoxFit.contain),
-              ),
-            );
-          }).toList(),
-    );
-  }
-
-  Widget _buildSettings() {
-    return ListView(
-      children: [
-        SwitchListTile(
-          title: const Text("Auto-align Hair"),
-          value: _autoAlignHair,
-          onChanged: (val) {
-            setState(() => _autoAlignHair = val);
-            Navigator.pop(context);
-          },
-        ),
-        ListTile(
-          title: const Text("Reset Hair Position"),
-          trailing: const Icon(Icons.refresh),
+      children: glassesList.map((glass) {
+        final selected = glass == _selectedGlasses;
+        return GestureDetector(
           onTap: () {
-            Navigator.pop(context);
-            _resetHairPositionToCenter();
+            HapticFeedback.lightImpact();
+            setModalState(() {
+              _selectedGlasses = selected ? '' : glass;
+            });
+            setState(() {});
           },
-        ),
-      ],
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: selected ? Colors.teal : Colors.grey,
+                width: selected ? 3 : 1,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: Image.asset(glass, fit: BoxFit.contain),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -410,8 +422,8 @@ class _TryHairstylesState extends State<TryHairstyles>
   }
 
   void _resizeHair(String handle, DragUpdateDetails details) {
-    final delta = details.delta;
     const double minSize = 50;
+    const double maxSize = 400;
     double boxWidth = 160 * _hairScaleX;
     double boxHeight = 160 * _hairScaleY;
     Offset newOffset = _hairOffset;
@@ -421,56 +433,59 @@ class _TryHairstylesState extends State<TryHairstyles>
 
     switch (handle) {
       case 'topLeft':
-        widthChange = -delta.dx;
-        heightChange = -delta.dy;
-        newOffset += Offset(delta.dx, delta.dy);
+        widthChange = -details.delta.dx;
+        heightChange = -details.delta.dy;
+        newOffset += Offset(details.delta.dx, details.delta.dy);
         break;
       case 'top':
-        heightChange = -delta.dy;
-        newOffset += Offset(0, delta.dy);
+        heightChange = -details.delta.dy;
+        newOffset += Offset(0, details.delta.dy);
         break;
       case 'topRight':
-        widthChange = delta.dx;
-        heightChange = -delta.dy;
-        newOffset += Offset(0, delta.dy);
+        widthChange = details.delta.dx;
+        heightChange = -details.delta.dy;
+        newOffset += Offset(0, details.delta.dy);
         break;
       case 'right':
-        widthChange = delta.dx;
+        widthChange = details.delta.dx;
         break;
       case 'bottomRight':
-        widthChange = delta.dx;
-        heightChange = delta.dy;
+        widthChange = details.delta.dx;
+        heightChange = details.delta.dy;
         break;
       case 'bottom':
-        heightChange = delta.dy;
+        heightChange = details.delta.dy;
         break;
       case 'bottomLeft':
-        widthChange = -delta.dx;
-        heightChange = delta.dy;
-        newOffset += Offset(delta.dx, 0);
+        widthChange = -details.delta.dx;
+        heightChange = details.delta.dy;
+        newOffset += Offset(details.delta.dx, 0);
         break;
       case 'left':
-        widthChange = -delta.dx;
-        newOffset += Offset(delta.dx, 0);
+        widthChange = -details.delta.dx;
+        newOffset += Offset(details.delta.dx, 0);
         break;
     }
 
     double newWidth = boxWidth + widthChange;
     double newHeight = boxHeight + heightChange;
 
-    if (newWidth < minSize) {
+    // Constrain to min/max sizes
+    newWidth = newWidth.clamp(minSize, maxSize);
+    newHeight = newHeight.clamp(minSize, maxSize);
+
+    // Adjust offset if we hit size constraints
+    if (newWidth == minSize || newWidth == maxSize) {
       newOffset = Offset(
-        newOffset.dx + (newWidth - minSize) * (widthChange < 0 ? 1 : 0),
+        _initialOffset.dx + (boxWidth - newWidth) * (widthChange < 0 ? 1 : 0),
         newOffset.dy,
       );
-      newWidth = minSize;
     }
-    if (newHeight < minSize) {
+    if (newHeight == minSize || newHeight == maxSize) {
       newOffset = Offset(
         newOffset.dx,
-        newOffset.dy + (newHeight - minSize) * (heightChange < 0 ? 1 : 0),
+        _initialOffset.dy + (boxHeight - newHeight) * (heightChange < 0 ? 1 : 0),
       );
-      newHeight = minSize;
     }
 
     setState(() {
@@ -481,7 +496,7 @@ class _TryHairstylesState extends State<TryHairstyles>
   }
 
   List<Widget> _buildResizeHandles(double boxWidth, double boxHeight) {
-    const double handleSize = 20;
+    const double handleSize = 24.0;
 
     final handles = <Map<String, dynamic>>[
       {'name': 'topLeft', 'left': 0.0, 'top': 0.0},
@@ -506,7 +521,7 @@ class _TryHairstylesState extends State<TryHairstyles>
       {'name': 'left', 'left': 0.0, 'top': boxHeight / 2 - handleSize / 2},
     ];
 
-    return handles.map((handle) {
+  return handles.map((handle) {
       return Positioned(
         left: handle['left'],
         top: handle['top'],
@@ -542,30 +557,34 @@ class _TryHairstylesState extends State<TryHairstyles>
       appBar: AppBar(
         backgroundColor: Colors.teal[700],
         title: const Text("Hairstyle Try-On"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.camera_alt),
-            onPressed: _captureFromCamera,
-          ),
-        ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 8),
-          _buildGenderToggle(),
-          const SizedBox(height: 8),
-          _buildImagePreview(),
-          const SizedBox(height: 6),
-          Text(resultText, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
+      body:
+          _isProcessing
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                children: [
+                  const SizedBox(height: 8),
+                  _buildGenderToggle(),
+                  const SizedBox(height: 8),
+                  _buildImagePreview(),
+                  const SizedBox(height: 6),
+                  Text(
+                    resultText,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedBottomTab,
         onTap: (index) {
           setState(() => _selectedBottomTab = index);
           if (index == 0) _openPanel("Hair");
           if (index == 1) _openPanel("Glasses");
-          if (index == 2) _openPanel("Settings");
+          if (index == 2) _openPanel("Editor");
         },
         selectedItemColor: Colors.teal,
         items: const [
@@ -574,10 +593,7 @@ class _TryHairstylesState extends State<TryHairstyles>
             icon: Icon(Icons.remove_red_eye),
             label: "Glasses",
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: "Settings",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.edit), label: "Editor"),
         ],
       ),
     );
@@ -612,263 +628,224 @@ class _TryHairstylesState extends State<TryHairstyles>
   Widget _buildImagePreview() {
     return Expanded(
       child: Center(
-        child:
-            _capturedImage == null
-                ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.camera_alt_outlined,
-                      size: 80,
-                      color: Colors.teal[300],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Tap the camera icon to take a photo.",
-                      style: TextStyle(color: Colors.teal[700], fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                )
-                : Stack(
-                  children: [
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        double boxWidth = 160 * _hairScaleX;
-                        double boxHeight = 160 * _hairScaleY;
+        child: Stack(
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                double boxWidth = 160 * _hairScaleX;
+                double boxHeight = 160 * _hairScaleY;
 
-                        return RepaintBoundary(
-                          key: _imageKey,
-                          child: Stack(
-                            children: [
-                              Image.file(
-                                _capturedImage!,
-                                width: constraints.maxWidth,
-                                fit: BoxFit.contain,
-                              ),
-                              if (_selectedHair.isNotEmpty)
-                                Positioned(
-                                  left: _hairOffset.dx,
-                                  top: _hairOffset.dy,
-                                  child: GestureDetector(
-                                    onPanUpdate: (details) {
-                                      if (!_isRotating) {
-                                        setState(() {
-                                          _hairOffset += details.delta;
-                                        });
-                                      }
-                                    },
-                                    child: Transform.rotate(
-                                      angle: _hairRotation,
-                                      child: Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          Container(
-                                            width: boxWidth,
-                                            height: boxHeight,
-                                            decoration:
-                                                _isHairBeingEdited
-                                                    ? BoxDecoration(
-                                                      border: Border.all(
-                                                        color:
-                                                            const Color.fromARGB(
-                                                              255,
-                                                              59,
-                                                              193,
-                                                              255,
-                                                            ),
-                                                        width: 3,
-                                                      ),
-                                                    )
-                                                    : null,
-                                            child: ClipRect(
-                                              child: Image.asset(
-                                                _selectedHair,
-                                                fit: BoxFit.cover,
-                                                width: boxWidth,
-                                                height: boxHeight,
-                                              ),
-                                            ),
-                                          ),
-
-                                          if (_isHairBeingEdited)
-                                            ..._buildResizeHandles(
-                                              boxWidth,
-                                              boxHeight,
-                                            ),
-                                          if (_isHairBeingEdited)
-                                            Positioned(
-                                              right: -14,
-                                              bottom: -14,
-                                              child: Listener(
-                                                behavior:
-                                                    HitTestBehavior.translucent,
-                                                onPointerDown: (details) {
-                                                  final renderBox =
-                                                      context.findRenderObject()
-                                                          as RenderBox;
-                                                  final center = renderBox
-                                                      .localToGlobal(
-                                                        Offset(
-                                                          boxWidth / 2,
-                                                          boxHeight / 2,
-                                                        ),
-                                                      );
-                                                  setState(() {
-                                                    _isRotating = true;
-                                                    _rotationCenter = center;
-                                                    _rotationStartVector =
-                                                        details.position -
-                                                        center;
-                                                    _initialRotation =
-                                                        _hairRotation;
-                                                  });
-                                                },
-                                                onPointerMove: (details) {
-                                                  if (!_isRotating ||
-                                                      _rotationCenter == null ||
-                                                      _rotationStartVector ==
-                                                          null) {
-                                                    return;
-                                                  }
-
-                                                  final currentVector =
-                                                      details.position -
-                                                      _rotationCenter!;
-                                                  final angle =
-                                                      _angleBetweenVectors(
-                                                        _rotationStartVector!,
-                                                        currentVector,
-                                                      );
-
-                                                  setState(() {
-                                                    _hairRotation =
-                                                        _initialRotation +
-                                                        angle;
-                                                  });
-                                                },
-                                                onPointerUp: (_) {
-                                                  setState(
-                                                    () => _isRotating = false,
-                                                  );
-                                                },
-                                                child: SizedBox(
-                                                  width: 36,
-                                                  height: 36,
-                                                  child: Align(
-                                                    alignment:
-                                                        Alignment.topLeft,
-                                                    child: Container(
-                                                      width: 24,
-                                                      height: 24,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.orange,
-                                                        shape: BoxShape.circle,
-                                                        border: Border.all(
-                                                          color: Colors.black,
-                                                          width: 1.5,
-                                                        ),
-                                                        boxShadow: [
-                                                          BoxShadow(
-                                                            color: Colors.black
-                                                                .withOpacity(
-                                                                  0.2,
-                                                                ),
-                                                            blurRadius: 2,
-                                                            offset:
-                                                                const Offset(
-                                                                  1,
-                                                                  1,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      child: const Icon(
-                                                        Icons.rotate_right,
-                                                        size: 16,
-                                                        color: Colors.black,
-                                                      ),
-                                                    ),
-                                                  ),
+                return RepaintBoundary(
+                  key: _imageKey,
+                  child: Stack(
+                    children: [
+                      SizedBox(
+                        width: constraints.maxWidth,
+                        height: constraints.maxHeight,
+                        child: InteractiveViewer(
+                          panEnabled: false,
+                          minScale: 0.5,
+                          maxScale: 2.0,
+                          child: Image.file(
+                            _processedImage ?? _capturedImage,
+                            fit: BoxFit.contain,
+                            filterQuality: FilterQuality.high,
+                          ),
+                        ),
+                      ),
+                      if (_selectedHair.isNotEmpty)
+                        Positioned(
+                          left: _hairOffset.dx,
+                          top: _hairOffset.dy,
+                          child: GestureDetector(
+                            onPanUpdate: (details) {
+                              if (!_isRotating) {
+                                setState(() {
+                                  _hairOffset += details.delta;
+                                });
+                              }
+                            },
+                            child: Transform.rotate(
+                              angle: _hairRotation,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: boxWidth,
+                                    height: boxHeight,
+                                    decoration:
+                                        _isHairBeingEdited
+                                            ? BoxDecoration(
+                                              border: Border.all(
+                                                color: const Color.fromARGB(
+                                                  255,
+                                                  59,
+                                                  193,
+                                                  255,
                                                 ),
+                                                width: 3,
                                               ),
-                                            ),
-                                          if (_isHairBeingEdited)
-                                            Positioned(
-                                              right: -14,
-                                              top: -14,
-                                              child: GestureDetector(
-                                                behavior:
-                                                    HitTestBehavior.translucent,
-                                                onTap:
-                                                    () => setState(
-                                                      () =>
-                                                          _isHairBeingEdited =
-                                                              false,
-                                                    ),
-                                                child: SizedBox(
-                                                  width: 36,
-                                                  height: 36,
-                                                  child: Align(
-                                                    alignment:
-                                                        Alignment.bottomRight,
-                                                    child: Container(
-                                                      width: 24,
-                                                      height: 24,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.green,
-                                                        shape: BoxShape.circle,
-                                                        border: Border.all(
-                                                          color: Colors.black,
-                                                          width: 1.5,
-                                                        ),
-                                                        boxShadow: [
-                                                          BoxShadow(
-                                                            color: Colors.black
-                                                                .withOpacity(
-                                                                  0.2,
-                                                                ),
-                                                            blurRadius: 2,
-                                                            offset:
-                                                                const Offset(
-                                                                  1,
-                                                                  1,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      child: const Icon(
-                                                        Icons.check,
-                                                        size: 16,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
+                                            )
+                                            : null,
+                                    child: ClipRect(
+                                      child: Image.asset(
+                                        _selectedHair,
+                                        fit: BoxFit.cover,
+                                        width: boxWidth,
+                                        height: boxHeight,
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                                  if (_isHairBeingEdited)
+                                    ..._buildResizeHandles(boxWidth, boxHeight),
+                                  if (_isHairBeingEdited)
+                                    Positioned(
+                                      right: -14,
+                                      bottom: -14,
+                                      child: Listener(
+                                        behavior: HitTestBehavior.translucent,
+                                        onPointerDown: (details) {
+                                          final renderBox =
+                                              context.findRenderObject()
+                                                  as RenderBox;
+                                          final center = renderBox
+                                              .localToGlobal(
+                                                Offset(
+                                                  boxWidth / 2,
+                                                  boxHeight / 2,
+                                                ),
+                                              );
+                                          setState(() {
+                                            _isRotating = true;
+                                            _rotationCenter = center;
+                                            _rotationStartVector =
+                                                details.position - center;
+                                            _initialRotation = _hairRotation;
+                                          });
+                                        },
+                                        onPointerMove: (details) {
+                                          if (!_isRotating ||
+                                              _rotationCenter == null ||
+                                              _rotationStartVector == null) {
+                                            return;
+                                          }
+
+                                          final currentVector =
+                                              details.position -
+                                              _rotationCenter!;
+                                          final angle = _angleBetweenVectors(
+                                            _rotationStartVector!,
+                                            currentVector,
+                                          );
+
+                                          setState(() {
+                                            _hairRotation =
+                                                _initialRotation + angle;
+                                          });
+                                        },
+                                        onPointerUp: (_) {
+                                          setState(() => _isRotating = false);
+                                        },
+                                        child: SizedBox(
+                                          width: 36,
+                                          height: 36,
+                                          child: Align(
+                                            alignment: Alignment.topLeft,
+                                            child: Container(
+                                              width: 24,
+                                              height: 24,
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.black,
+                                                  width: 1.5,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.2),
+                                                    blurRadius: 2,
+                                                    offset: const Offset(1, 1),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.rotate_right,
+                                                size: 16,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  if (_isHairBeingEdited)
+                                    Positioned(
+                                      right: -14,
+                                      top: -14,
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.translucent,
+                                        onTap:
+                                            () => setState(
+                                              () => _isHairBeingEdited = false,
+                                            ),
+                                        child: SizedBox(
+                                          width: 36,
+                                          height: 36,
+                                          child: Align(
+                                            alignment: Alignment.bottomRight,
+                                            child: Container(
+                                              width: 24,
+                                              height: 24,
+                                              decoration: BoxDecoration(
+                                                color: Colors.green,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.black,
+                                                  width: 1.5,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.2),
+                                                    blurRadius: 2,
+                                                    offset: const Offset(1, 1),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.check,
+                                                size: 16,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                    if (_selectedHair.isNotEmpty && !_isHairBeingEdited)
-                      Positioned(
-                        right: 20,
-                        bottom: 20,
-                        child: FloatingActionButton(
-                          backgroundColor: Colors.teal,
-                          onPressed: _saveImage,
-                          child: const Icon(Icons.save, color: Colors.white),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
+                );
+              },
+            ),
+            if (_selectedHair.isNotEmpty && !_isHairBeingEdited)
+              Positioned(
+                right: 20,
+                bottom: 20,
+                child: FloatingActionButton(
+                  backgroundColor: Colors.teal,
+                  onPressed: _saveImage,
+                  child: const Icon(Icons.save, color: Colors.white),
                 ),
+              ),
+          ],
+        ),
       ),
     );
   }
