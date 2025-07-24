@@ -16,14 +16,14 @@ class GalleryView extends StatefulWidget {
     this.text,
     required this.onImage,
     required this.onDetectorViewModeChanged,
-    this.navigateToTryHairstyle = false, // New parameter to control navigation
+    this.isTryHairstyleFlow = false,
   });
 
   final String title;
   final String? text;
   final Function(InputImage inputImage) onImage;
   final Function()? onDetectorViewModeChanged;
-  final bool navigateToTryHairstyle; // Determines if should navigate to TryHairstyles
+  final bool isTryHairstyleFlow;
 
   @override
   State<GalleryView> createState() => _GalleryViewState();
@@ -31,7 +31,6 @@ class GalleryView extends StatefulWidget {
 
 class _GalleryViewState extends State<GalleryView> {
   File? _image;
-  String? _path;
   ImagePicker? _imagePicker;
   String _faceResult = '';
   late final FaceDetector _faceDetector;
@@ -56,103 +55,55 @@ class _GalleryViewState extends State<GalleryView> {
     super.dispose();
   }
 
- @override
-Widget build(BuildContext context) {
-  final bool showCropButton = _faceResult.startsWith('1 face') && _image != null;
-
-  return Scaffold(
-    appBar: AppBar(
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFff4081), Color(0xFFff80ab)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(38),
+        child: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            widget.title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
           ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Icon(
+                Platform.isIOS ? Icons.camera_alt_outlined : Icons.camera,
+                color: Colors.black54,
+                size: 20,
+              ),
+              onPressed: widget.onDetectorViewModeChanged,
+            ),
+          ],
+          toolbarHeight: 38,
         ),
       ),
-      title: Text(widget.title),
-      actions: [
-        IconButton(
-          icon: Icon(
-            Platform.isIOS ? Icons.camera_alt_outlined : Icons.camera,
-          ),
-          onPressed: widget.onDetectorViewModeChanged,
-        ),
-      ],
-    ),
-    body: Stack(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF2193b0),
-                Color(0xFF6dd5ed),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        _buildBody(),
-        if (_isProcessing)
-          const Center(child: CircularProgressIndicator()),
-        if (showCropButton)
-          Positioned(
-            bottom: 32,
-            right: 32,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ImageCropperScreen(imageFile: _image!),
-                  ),
-                );
-              },
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFff4081), Color(0xFFff80ab)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 8,
-                      offset: Offset(2, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 32,
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: _buildImagePreview(),
                 ),
               ),
-            ),
+              _buildResultDisplay(),
+              const SizedBox(height: 12),
+              _buildActionButtonsGrid(),
+              const SizedBox(height: 24),
+            ],
           ),
-      ],
-    ),
-  );
-}
-  Widget _buildBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildImagePreview(),
-          const SizedBox(height: 24),
-          _buildResultDisplay(),
-          const SizedBox(height: 32),
-          _buildActionButtons(),
-          const SizedBox(height: 24),
+          if (_isProcessing)
+            const Center(child: CircularProgressIndicator()),
         ],
       ),
     );
@@ -160,7 +111,6 @@ Widget build(BuildContext context) {
 
   Widget _buildImagePreview() {
     return Container(
-      height: 300,
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.grey[200],
@@ -169,18 +119,31 @@ Widget build(BuildContext context) {
       child: _image != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Image.file(_image!, fit: BoxFit.cover),
+              child: Image.file(_image!, fit: BoxFit.contain),
             )
-          : const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.image, size: 80, color: Colors.grey),
-                SizedBox(height: 16),
-                Text(
-                  'No image selected',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
+          : Padding(
+              padding: const EdgeInsets.all(0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(0),
+                      child: Image.asset(
+                        'assets/Instruct-image.png',
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Please select or capture an image to begin.',
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ],
+              ),
             ),
     );
   }
@@ -210,94 +173,61 @@ Widget build(BuildContext context) {
             textAlign: TextAlign.center,
           ),
         ),
-        if (_faceResult.startsWith('1 face') && !widget.navigateToTryHairstyle)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pinkAccent,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TryHairstyles(initialImage: _image!),
-                  ),
-                );
-              },
-              child: const Text(
-                'Try Hairstyles with This Image',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtonsGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildSquareButton(
+            'Gallery',
+            Icons.photo_library,
+            () => _getImage(ImageSource.gallery),
           ),
-      ],
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Column(
-      children: [
-        _buildActionButton(
-          'Pick from Gallery',
-          Icons.photo_library,
-          () => _getImage(ImageSource.gallery),
-        ),
-        const SizedBox(height: 16),
-        _buildActionButton(
-          'Take a Picture',
-          Icons.camera_alt,
-          () => _getImage(ImageSource.camera),
-        ),
-        const SizedBox(height: 16),
-        _buildActionButton(
-          'Choose Sample Image',
-          Icons.photo_album,
-          _getImageAsset,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(
-    String text,
-    IconData icon,
-    VoidCallback onPressed,
-  ) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2193b0), Color(0xFF6dd5ed)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(1, 2)),
+          _buildSquareButton(
+            'Camera',
+            Icons.camera_alt,
+            () => _getImage(ImageSource.camera),
+          ),
+          _buildSquareButton('Samples', Icons.photo_album, _getImageAsset),
         ],
       ),
-      child: ElevatedButton.icon(
-        icon: Icon(icon, color: Colors.white),
-        label: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.1,
+    );
+  }
+
+  Widget _buildSquareButton(String text, IconData icon, VoidCallback onTap) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 90,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 32, color: Colors.black54),
+                const SizedBox(height: 8),
+                Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
         ),
       ),
     );
@@ -306,7 +236,6 @@ Widget build(BuildContext context) {
   Future<void> _getImage(ImageSource source) async {
     setState(() {
       _image = null;
-      _path = null;
       _faceResult = '';
       _isProcessing = true;
     });
@@ -326,7 +255,6 @@ Widget build(BuildContext context) {
   Future<void> _getImageAsset() async {
     setState(() {
       _image = null;
-      _path = null;
       _faceResult = '';
       _isProcessing = true;
     });
@@ -403,7 +331,6 @@ Widget build(BuildContext context) {
   Future<void> _processFile(String path) async {
     setState(() {
       _image = File(path);
-      _path = path;
       _faceResult = 'Analyzing...';
       _isProcessing = true;
     });
@@ -420,14 +347,27 @@ Widget build(BuildContext context) {
 
       widget.onImage(inputImage);
 
-      // Auto-navigate if in hairstyle mode and exactly one face detected
-      if (widget.navigateToTryHairstyle && faces.length == 1) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TryHairstyles(initialImage: File(path)),
-          ),
-        );
+      if (_image != null && faces.isNotEmpty) {
+        if (widget.isTryHairstyleFlow) {
+          // Navigate to TryHairstyles if in hairstyle flow
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TryHairstyles(initialImage: _image!),
+            ),
+          );
+        } else {
+          // Navigate to ImageCropperScreen for face shape detection
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ImageCropperScreen(
+                imageFile: _image!,
+                isTryHairstyleFlow: widget.isTryHairstyleFlow,
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       setState(() => _faceResult = 'Error processing image');

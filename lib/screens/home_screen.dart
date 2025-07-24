@@ -101,10 +101,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => GalleryView(
-  title: 'Try Hairstyles',
-  onImage: (inputImage) {}, // Can be empty if using auto-navigation
-  onDetectorViewModeChanged: () {},
-  navigateToTryHairstyle: true,
+  title: 'Try New Hairstyles',
+  onImage: (inputImage) { /* handle image */ },
+  onDetectorViewModeChanged: () { /* switch to camera */ },
+  isTryHairstyleFlow: true,
 )
                     ),
                   );

@@ -29,6 +29,7 @@ dependencies:
   image: ^4.0.17
   url_launcher: ^6.2.6
   pro_image_editor: ^10.5.3
+  tflite_flutter: ^0.11.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
