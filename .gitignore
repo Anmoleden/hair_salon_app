@@ -43,3 +43,5 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/assets/face_classification_model/face_shape_classifier.tflite
+/assets/models/face_shape_classifier_quant.tflite

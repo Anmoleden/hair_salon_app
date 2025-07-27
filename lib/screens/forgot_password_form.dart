@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import "package:http/http.dart" as http;
+import 'dart:convert';
+import '../config/api_config.dart';
 
 class ForgotPasswordForm extends StatefulWidget {
   const ForgotPasswordForm({super.key});
@@ -16,15 +19,34 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2)); // simulate backend
+
+    try {
+      final response = await http.post(
+        // Uri.parse("http://192.168.1.64:8080/forgot-password"),
+        ApiConfig.getForgotPasswordUri(),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({"email": _emailController.text.trim()}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data["message"] ?? "Reset link sent.")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data["error"] ?? "Failed to send reset link")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("An error occurred: $e")));
+    }
+
     setState(() => _isLoading = false);
-
-    if (!mounted) return;
-    Navigator.of(context).pop();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password reset link sent to your email.')),
-    );
   }
 
   @override

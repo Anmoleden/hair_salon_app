@@ -1,61 +1,187 @@
-import 'package:hair_salon/screens/detectfaceshape.dart';
+// import 'package:hair_salon/screens/detectfaceshape.dart';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hair_salon/screens/profile.dart';
+
+//added part
+import 'package:hair_salon/screens/gallery_view.dart';
+import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+
+//added part
+import '../classifiers/hairstyle_model.dart';
+import '../config/api_config.dart';
+import '../services/trending_services.dart';
+import 'gallery_view_direct.dart';
+import 'trending_page.dart';
+import 'history_page.dart';
+// ignore: unused_import
+import 'favourites_page.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required String loginMethod});
+  //add part
+  final String username;
+  final String loginMethod;
+  final String gender;
+
+  const HomeScreen({
+    super.key,
+    required this.username,
+    required this.loginMethod,
+    required this.gender,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+  // ignore: unused_field
+  final int _selectedIndex = 0;
 
-  final List<Map<String, String>> _trendingStyles = [
-    {
-      'imageUrl': "https://i.imgur.com/3yNCE0N.jpg",
-      'title': "Classic Bob",
-      'gender': "Female",
-      'length': "medium",
-    },
-    {
-      'imageUrl': "https://i.imgur.com/xvw3VZk.jpg",
-      'title': "Textured Crop",
-      'gender': "Male",
-      'length': "short",
-    },
-    {
-      'imageUrl': "https://i.imgur.com/KO5WzwP.jpg",
-      'title': "Wavy Shag",
-      'gender': "Female",
-      'length': "long",
-    },
-  ];
+  // Trending styles from backend
+  List<Hairstyle> _trendingStyles = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrendingHairstyles(); // <-- Fetch trending hairstyles here
+  }
+
+  // Function to fetch trending hairstyles from backend
+  Future<void> _loadTrendingHairstyles() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final trending = await ApiService.fetchTrendingHairstyles();
+      print('Home Screen: Fetched ${trending.length} trending hairstyles');
+      print('First hairstyle: ${trending.isNotEmpty ? trending.first.hairstyleName : 'No hairstyles'}');
+      print('First image URL: ${trending.isNotEmpty ? trending.first.representingImageUrl : 'No URL'}');
+      
+      setState(() {
+        _trendingStyles = trending;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading trending hairstyles: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  //  Trending styles UI
+  Widget buildTrendingStyles() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_trendingStyles.isEmpty) {
+      return const Center(child: Text('No trending styles found.'));
+    }
+
+    return SizedBox(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _trendingStyles.length,
+        itemBuilder: (context, index) {
+          final style = _trendingStyles[index];
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    "${ApiConfig.baseUrl}/public/hairstyles/${style.representingImageUrl}",
+                    width: 100,
+                    height: 120,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(style.hairstyleName),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   void _onBottomNavTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    switch (index) {
+      case 1: // Trending
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const TrendingPage()),
+        );
+        break;
+      case 2: // Favorites
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const FavoritesPage()),
+        );
+        break;
+      case 3: // Profile
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => ProfilePage(
+                  username: widget.username,
+                  gender: widget.gender,
+                ),
+          ),
+        );
+        break;
+      default:
+        // index 0 = Home (do nothing)
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    // final helloText = 'Hello, ${widget.username}!';
+    // ① Extract and format the name here:
+    final fullName = widget.username;
+    final firstName = fullName.split(' ').first;
+    final capitalizedFirstName =
+        '${firstName[0].toUpperCase()}${firstName.substring(1)}';
+    final helloText = 'Hello, $capitalizedFirstName!';
 
     return Scaffold(
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.pinkAccent,
         unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
+        // currentIndex: _selectedIndex,
+        currentIndex: 0,
         onTap: _onBottomNavTap,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.trending_up), label: "Trending"),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: "Favorites"),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Profile"),
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: "Home",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.trending_up),
+            label: "Trending",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite_border),
+            label: "Favorites",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: "Profile",
+          ),
         ],
       ),
       body: SafeArea(
@@ -67,15 +193,8 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListView(
             children: [
               Text(
-                "Home",
-                style: GoogleFonts.poppins(
-                  fontSize: screenWidth * 0.055,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(height: screenHeight * 0.01),
-              Text(
-                "Hello, Beautiful!",
+                helloText,
+                // "Hello, Beautiful!",
                 style: GoogleFonts.poppins(
                   fontSize: screenWidth * 0.05,
                   fontWeight: FontWeight.bold,
@@ -100,14 +219,69 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const DetectFaceShapeScreen(),
+                          builder:
+                              (context) => GalleryView(
+                                title: 'Gallery',
+                                onImage: (InputImage inputImage) async {
+                                  // This will be filled in the next step
+                                },
+                                onDetectorViewModeChanged: () {},
+                                isTryHairstyleFlow: false,
+                                gender: widget.gender,
+                              ),
                         ),
                       );
                     },
                   ),
-                  _FeatureIcon(icon: Icons.content_cut, text: "Try\nHairstyles", color: Colors.cyan),
-                  _FeatureIcon(icon: Icons.trending_up, text: "Trending", color: Colors.purple),
-                  _FeatureIcon(icon: Icons.history, text: "History", color: Colors.green),
+                  _FeatureIcon(
+                    icon: Icons.content_cut,
+                    text: "Try\nHairstyles",
+                    color: Colors.cyan,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => GalleryViewDirect(
+                                title: 'Gallery',
+                                onImage: (InputImage inputImage) async {
+                                  // This will be filled in the next step
+                                },
+                                onDetectorViewModeChanged: () {},
+                                isTryHairstyleFlow: true,
+                                gender: widget.gender,
+                              ),
+                        ),
+                      );
+                    },
+                  ),
+                  _FeatureIcon(
+                    icon: Icons.trending_up,
+                    text: "Trending",
+                    color: Colors.purple,
+                    //added part
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TrendingPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _FeatureIcon(
+                    icon: Icons.history,
+                    text: "History",
+                    color: Colors.green,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HistoryPage(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
               SizedBox(height: screenHeight * 0.03),
@@ -138,7 +312,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(height: screenHeight * 0.015),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 255, 64, 191),
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          255,
+                          64,
+                          191,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -148,11 +327,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       icon: const Icon(Icons.camera_alt, color: Colors.white),
-                      label: const Text("Detect Face Shape", style: TextStyle(color: Colors.white)),
+                      label: const Text(
+                        "Detect Face Shape",
+                        style: TextStyle(color: Colors.white),
+                      ),
                       onPressed: () {
+                        // Navigator.push(
+                        //   context,
+                        //   MaterialPageRoute(
+                        //     builder: (context) => const DetectFaceShapeScreen(),
+                        //   ),
+                        // );
+                        //added part
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const DetectFaceShapeScreen()),
+                          MaterialPageRoute(
+                            builder:
+                                (context) => GalleryView(
+                                  title: 'Gallery',
+                                  onImage: (inputImage) {
+                                    // You can handle the inputImage here or leave empty if not needed
+                                  },
+                                  onDetectorViewModeChanged: () {
+                                    // Handle mode change if needed
+                                  },
+                                  isTryHairstyleFlow: false,
+                                  gender: widget.gender,
+                                ),
+                          ),
                         );
                       },
                     ),
@@ -160,20 +362,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               SizedBox(height: screenHeight * 0.03),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Trending Hairstyles",
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: screenWidth * 0.042,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Trending Hairstyles",
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: screenWidth * 0.042,
+                      ),
                     ),
-                  ),
-                  Text("See All", style: GoogleFonts.poppins(color: Colors.pinkAccent)),
-                ],
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => const TrendingPage(
+                                  // showFavoritesOnly: false,
+                                ),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        "See All",
+                        style: GoogleFonts.poppins(
+                          color: Colors.pinkAccent,
+                          fontWeight: FontWeight.w500,
+                          fontSize: screenWidth * 0.035,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              SizedBox(height: screenHeight * 0.015),
+
+              SizedBox(height: screenHeight * 0.030),
               SizedBox(
                 height: screenHeight * 0.25,
                 child: ListView.builder(
@@ -181,11 +408,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemCount: _trendingStyles.length,
                   itemBuilder: (context, index) {
                     final style = _trendingStyles[index];
+                    final imageUrl = "${ApiConfig.baseUrl}/public/hairstyles/${style.representingImageUrl}";
+                    print('Constructed image URL for ${style.hairstyleName}: $imageUrl');
                     return _TrendingCard(
-                      imageUrl: style['imageUrl']!,
-                      title: style['title']!,
-                      gender: style['gender']!,
-                      length: style['length']!,
+                      representingImageUrl: style.representingImageUrl,
+                      title: style.hairstyleName,
+                      gender: style.gender,
+                      length: style.category,
                       width: screenWidth * 0.4,
                     );
                   },
@@ -225,7 +454,11 @@ class _FeatureIcon extends StatelessWidget {
             child: Icon(icon, color: color, size: screenWidth * 0.06),
           ),
           SizedBox(height: screenWidth * 0.015),
-          Text(text, textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: screenWidth * 0.03)),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: screenWidth * 0.03),
+          ),
         ],
       ),
     );
@@ -233,14 +466,16 @@ class _FeatureIcon extends StatelessWidget {
 }
 
 class _TrendingCard extends StatelessWidget {
-  final String imageUrl;
+  //final String imageUrl;
+  final String representingImageUrl;
   final String title;
   final String gender;
   final String length;
   final double width;
 
   const _TrendingCard({
-    required this.imageUrl,
+    // required this.imageUrl,
+    required this.representingImageUrl,
     required this.title,
     required this.gender,
     required this.length,
@@ -256,34 +491,99 @@ class _TrendingCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
-            child: Image.network(imageUrl, height: double.infinity, width: double.infinity, fit: BoxFit.cover),
+            child: Image.network(
+              "${ApiConfig.baseUrl}/public/hairstyles/$representingImageUrl",
+              height: double.infinity,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                print('Error loading image: ${ApiConfig.baseUrl}/public/hairstyles/$representingImageUrl');
+                print('Error: $error');
+                return Container(
+                  height: double.infinity,
+                  width: double.infinity,
+                  color: Colors.grey[300],
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.broken_image, color: Colors.grey),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Image Error',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  height: double.infinity,
+                  width: double.infinity,
+                  color: Colors.grey[200],
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded / 
+                            loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
           Positioned(
             top: 8,
             left: 8,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: Colors.pinkAccent, borderRadius: BorderRadius.circular(10)),
-              child: const Text("Trending", style: TextStyle(color: Colors.black, fontSize: 10)),
+              decoration: BoxDecoration(
+                color: Colors.pinkAccent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                "Trending",
+                style: TextStyle(color: Colors.black, fontSize: 10),
+              ),
             ),
           ),
           Positioned(
             bottom: 28,
             left: 8,
-            child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           Positioned(
             bottom: 10,
             left: 8,
-            child: Text("$gender · $length", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            child: Text(
+              "$gender · $length",
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
           ),
           Positioned(
             bottom: 10,
             right: 8,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-              child: const Text("Try On", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                "Try On",
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              ),
             ),
           ),
         ],
